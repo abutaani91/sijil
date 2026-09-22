@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1F4E5F">
+<title>سجلي</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#F3F6F7; --card:#FFFFFF; --ink:#1B2A30; --muted:#5E6E75; --line:#D9E2E5; --soft:#EAF1F3;
+  --accent:#1F4E5F; --accent-ink:#FFFFFF; --accent-soft:#D9E7EC;
+  --ok:#2E7D32; --ok-bg:#DCEFDD; --bad:#C62828; --bad-bg:#FBDADA; --part:#E65100; --part-bg:#FFE6CC; --abs:#616161; --abs-bg:#E4E4E4;
+  --shadow:0 1px 2px rgba(0,0,0,.06),0 2px 8px rgba(0,0,0,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0F1719; --card:#172226; --ink:#E6EEF0; --muted:#98A9AF; --line:#2A3A40; --soft:#1D2B30;
+    --accent:#5FA8BF; --accent-ink:#0B1416; --accent-soft:#1E3A44;
+    --ok:#7BD17F; --ok-bg:#1F3B22; --bad:#FF8A80; --bad-bg:#442222; --part:#FFB366; --part-bg:#43301A; --abs:#BDBDBD; --abs-bg:#2E2E2E;
+    --shadow:none;
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,"Segoe UI",Tahoma,Arial,sans-serif;font-size:15px}
+button,input,textarea,select{font:inherit;color:inherit}
+.wrap{max-width:720px;margin:0 auto;padding:0 12px 90px}
+header.top{position:sticky;top:0;z-index:20;background:var(--accent);color:var(--accent-ink);padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top));display:flex;align-items:center;gap:10px}
+header.top .t{flex:1;min-width:0}
+header.top h1{font-size:17px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header.top .sub{font-size:12px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ib{background:transparent;border:0;color:inherit;width:40px;height:40px;border-radius:10px;font-size:20px;display:grid;place-items:center;cursor:pointer}
+.ib:active{background:rgba(255,255,255,.15)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0;box-shadow:var(--shadow)}
+.card h2{font-size:16px;margin:0 0 8px}
+.muted{color:var(--muted);font-size:13px}
+.row{display:flex;align-items:center;gap:8px}
+.grow{flex:1;min-width:0}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;cursor:pointer;font-size:14px}
+.chip.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.subj{border:0;border-radius:12px;padding:12px 14px;color:#fff;font-weight:600;cursor:pointer;font-size:15px;flex:1 1 40%;text-align:center}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 14px;cursor:pointer;font-size:14px}
+.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.sm{padding:6px 10px;font-size:13px}
+.tabs{position:sticky;top:60px;z-index:15;background:var(--bg);padding:8px 0;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1 0 auto;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 10px;font-size:14px;cursor:pointer;white-space:nowrap}
+.tab.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.scroller{display:flex;gap:6px;overflow-x:auto;padding:4px 0 8px;scrollbar-width:thin}
+.pchip{flex:0 0 auto;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:6px 10px;cursor:pointer;text-align:center;min-width:54px}
+.pchip b{display:block;font-size:14px}
+.pchip small{font-size:11px;color:var(--muted)}
+.pchip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.pchip.on small{color:var(--accent-ink);opacity:.85}
+.pchip.done{box-shadow:inset 0 -3px 0 var(--ok)}
+.list{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.st{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--line);min-height:52px}
+.st:last-child{border-bottom:0}
+.st .n{width:22px;color:var(--muted);font-size:12px;text-align:center;flex:0 0 auto}
+.st .nm{flex:1;min-width:0;background:none;border:0;padding:0;text-align:right;cursor:pointer;font-size:13.5px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.st.stack{flex-wrap:wrap}
+.st.stack .cells{width:100%;padding-inline-start:30px}
+.cells{display:flex;gap:4px;flex:0 0 auto}
+.c{width:38px;height:40px;border-radius:9px;border:1px solid var(--line);background:var(--soft);font-size:17px;font-weight:700;cursor:pointer;display:grid;place-items:center;padding:0;position:relative}
+.c.sm{width:34px;height:36px;font-size:15px}
+.c .lb{position:absolute;top:1px;inset-inline-start:3px;font-size:9px;font-weight:500;color:var(--muted)}
+.c.ok{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.c.bad{background:var(--bad-bg);color:var(--bad);border-color:transparent}
+.c.part{background:var(--part-bg);color:var(--part);border-color:transparent}
+.c.abs{background:var(--abs-bg);color:var(--abs);border-color:transparent;font-size:15px}
+.c.r4{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.c.r3{background:#E6F2D9;color:#4E7D1E;border-color:transparent}
+.c.r2{background:var(--part-bg);color:var(--part);border-color:transparent}
+.c.r1{background:var(--bad-bg);color:var(--bad);border-color:transparent}
+@media (prefers-color-scheme: dark){.c.r3{background:#2B3A1D;color:#B5DA8A}}
+.seg .c:not(.sel){background:var(--card);border-color:var(--line);opacity:.45}
+.seg .c.sel{box-shadow:0 0 0 2px currentColor inset}
+.cnt{display:inline-block;margin-inline-end:6px;white-space:nowrap}
+.badge{flex:0 0 auto;min-width:44px;text-align:center;font-size:12px;font-weight:700;border-radius:8px;padding:4px 6px;background:var(--soft);color:var(--muted)}
+.badge.hi{background:var(--ok-bg);color:var(--ok)}
+.badge.mid{background:var(--part-bg);color:var(--part)}
+.badge.lo{background:var(--bad-bg);color:var(--bad)}
+.bar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.field{display:flex;flex-direction:column;gap:4px;margin:8px 0}
+.field label{font-size:13px;color:var(--muted)}
+input[type=text],input[type=number],input[type=date],textarea,select{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 10px;width:100%}
+textarea{min-height:90px;resize:vertical}
+.num{width:58px !important;text-align:center;padding:8px 4px !important}
+.legend{font-size:12px;color:var(--muted);line-height:1.8}
+.legend b{color:var(--ink)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kv{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.kv:last-child{border-bottom:0}
+.sidecard{padding:10px;border-bottom:1px solid var(--line)}
+.sidecard:last-child{border-bottom:0}
+.comp{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.comp span{font-size:12px;background:var(--soft);border-radius:7px;padding:3px 7px}
+.total{font-size:18px;font-weight:800;color:var(--accent)}
+.warn{background:var(--part-bg);color:var(--ink);border:1px solid var(--part);border-radius:12px;padding:10px 12px;margin:12px 0;font-size:14px}
+details summary{cursor:pointer;font-weight:600;padding:4px 0}
+.toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50;max-width:90vw}
+.toast.show{opacity:1}
+table.pf{width:100%;border-collapse:collapse;font-size:13px}
+table.pf th,table.pf td{border-bottom:1px solid var(--line);padding:7px 4px;text-align:center}
+table.pf th:first-child,table.pf td:first-child{text-align:right}
+.hint{font-size:12px;color:var(--muted);margin:4px 2px}
+</style>
+</head>
+<body>
+<header class="top">
+  <button class="ib" id="backBtn" data-act="back" aria-label="رجوع">→</button>
+  <div class="t"><h1 id="hTitle">سجلي</h1><div class="sub" id="hSub"></div></div>
+  <button class="ib" data-act="home" aria-label="الرئيسية">⌂</button>
+  <button class="ib" data-act="settings" aria-label="الإعدادات">⚙</button>
+</header>
+<main class="wrap" id="app"></main>
+<div class="toast" id="toast"></div>
+<input type="file" id="fileIn" accept=".json,application/json" hidden>
+<script src="xlsx.full.min.js" defer></script>
+<script>
+'use strict';
+/* ======================= ثوابت ======================= */
+const KEY = 'sijil-data-v1';
+const APP_VERSION = 1;
+const SUBJ = {
+  'علوم':  {full:'العلوم', color:'#2E7D32'},
+  'فيزياء':{full:'الفيزياء', color:'#1565C0'},
+  'كيمياء':{full:'الكيمياء', color:'#C62828'},
+  'أحياء': {full:'العلوم الحياتية', color:'#6A1B9A'},
+  'أرض':   {full:'علوم الأرض والبيئة', color:'#EF6C00'}
+};
+const GRADES = [
+  {key:'g8', name:'الثامن', mode:'weekly',  subjects:['علوم']},
+  {key:'g9', name:'التاسع', mode:'monthly', subjects:['فيزياء','كيمياء','أحياء','أرض']},
+  {key:'g10',name:'العاشر', mode:'monthly', subjects:['فيزياء','كيمياء','أحياء','أرض']}
+];
+const TRACK = ['الكتاب','الدفتر','الأدوات','السلوك'];
+const TRACK_S = ['ك','د','أ','س'];
+const RS_CRIT = ['فهم المهمة والتخطيط لها','جمع البيانات أو المعلومات وتنظيمها','التحليل والتفسير العلمي','دقة المفاهيم والمصطلحات','العرض والتواصل'];
+const CL_CRIT = ['يلتزم بتعليمات المهمة','يتعاون مع زملائه في المجموعة','يستخدم المصطلحات العلمية بدقة','يسجل ملاحظاته بتنظيم','يطرح أسئلة ذات صلة بالموضوع','يربط المفهوم بمثال من حياته','ينجز المهمة في الوقت المحدد','يعرض نتائجه بوضوح'];
+const DEF_WEEKS = ['23–27/8','30/8–3/9','6–10/9','13–17/9','20–24/9','27/9–1/10','4–8/10','11–15/10','18–22/10','25–29/10','1–5/11','8–12/11','15–19/11','22–26/11','29/11–3/12','6–10/12','13–14/12'];
+const DEF_MONTHS = ['آب – أيلول','تشرين الأول','تشرين الثاني','كانون الأول'];
+const W_LABELS = {hw:'الواجبات',tr:'المتابعة والسلوك',rs:'التقويم الأدائي (سلم التقدير)',cl:'قائمة الرصد',pp:'القلم والورقة (اختبارات قصيرة)',co:'التواصل (مشاركة شفوية)'};
+const W_SHORT = {hw:'و',tr:'م',rs:'أ',cl:'ر',pp:'ق',co:'ت'};
+
+/* ======================= الحالة ======================= */
+function defaultState(){
+  return {
+    app:'sijil', v:APP_VERSION,
+    settings:{school:'رجم الشامي الشرقي الثانوية للبنين', teacher:'محمد الطعاني', year:'2026 / 2027', sem:'الأول',
+      semStart:'2026-08-23', w:{hw:4,tr:3,rs:4,cl:2,pp:5,co:2}, qmax:[10,10,10], weeks:DEF_WEEKS.slice(), months:DEF_MONTHS.slice()},
+    grades:{g8:{section:'أ',students:[]}, g9:{section:'أ',students:[]}, g10:{section:'أ',students:[]}},
+    rec:{}, notes:{}, lastBackup:null
+  };
+}
+function newRecord(){
+  return {
+    hw:{items:Array.from({length:15},()=>({date:'',title:''})), m:{}},
+    tr:{m:{}},
+    rs:{tasks:[{title:'',crit:RS_CRIT.slice()},{title:'',crit:RS_CRIT.slice()}], m:{}},
+    cl:{title:'',crit:CL_CRIT.slice(), m:{}},
+    side:{q:{}, c:{}}
+  };
+}
+let S;
+function load(){
+  try{ const raw = localStorage.getItem(KEY); S = raw ? JSON.parse(raw) : null; }catch(e){ S = null; }
+  if(!S || S.app!=='sijil') S = defaultState();
+  migrate();
+}
+function migrate(){
+  const d = defaultState();
+  S.settings = Object.assign(d.settings, S.settings||{});
+  S.settings.w = Object.assign(d.settings.w, S.settings.w||{});
+  S.grades = Object.assign(d.grades, S.grades||{});
+  S.rec = S.rec||{}; S.notes = S.notes||{};
+}
+let saveErr = false;
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(S)); saveErr=false; }
+  catch(e){ if(!saveErr) toast('تعذّر الحفظ على الجهاز! احفظ نسخة احتياطية فوراً'); saveErr=true; }
+}
+function rec(g,s){ const k=g+'|'+s; if(!S.rec[k]) S.rec[k]=newRecord(); return S.rec[k]; }
+function gradeOf(k){ return GRADES.find(x=>x.key===k); }
+function studs(g){ return S.grades[g].students; }
+const uid = () => 's'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+
+/* ======================= الحسابات (مطابقة لملف Excel) ======================= */
+const isNum = v => typeof v === 'number' && !isNaN(v);
+const r1 = x => Math.round(x*10)/10;
+function hwStats(R,sid){
+  const m = R.hw.m[sid]||{}; let done=0,part=0,no=0,abs=0;
+  for(const k in m){ const v=m[k]; if(v===1)done++; else if(v===2)part++; else if(v===0)no++; else if(v==='غ')abs++; }
+  const den = done+part+no;
+  return {done,part,no,abs,pct: den? (done+0.5*part)/den : null};
+}
+function trStats(R,sid){
+  const m = R.tr.m[sid]||{}; const per=[[0,0],[0,0],[0,0],[0,0]]; // [value-sum, count]
+  let sum=0,cnt=0;
+  for(const p in m){ (m[p]||[]).forEach((v,k)=>{ if(isNum(v)){ per[k][0]+=v; per[k][1]++; sum+=v; cnt++; } }); }
+  return {per, sum, cnt};
+}
+function trPct(R,sid,mode){
+  const t = trStats(R,sid); if(!t.cnt) return null;
+  return mode==='weekly' ? t.sum/t.cnt : t.sum/(4*t.cnt);   // أسبوعي: القيم 1/0 ، شهري: 1..4
+}
+function trPer(R,sid,mode){
+  return trStats(R,sid).per.map(([s,c])=> c ? (mode==='weekly'? s/c : s/c) : null); // أسبوعي نسبة، شهري متوسط من 4
+}
+function rsTask(R,sid,t){
+  const a = ((R.rs.m[sid]||{})[t])||[]; const vals = a.filter(isNum);
+  return vals.length ? vals.reduce((x,y)=>x+y,0) : null;
+}
+function rsPct(R,sid){
+  const tots=[0,1].map(t=>rsTask(R,sid,t)).filter(x=>x!==null);
+  if(!tots.length) return null;
+  return tots.reduce((a,b)=>a+b,0)/(4*RS_CRIT.length*tots.length);
+}
+function rsGrade(p){ if(p===null) return ''; return p>=.9?'ممتاز':p>=.8?'جيد جداً':p>=.7?'جيد':p>=.5?'مقبول':'يحتاج دعماً'; }
+function clStats(R,sid){
+  const a = R.cl.m[sid]||[]; const n=a.filter(isNum); const yes=n.filter(v=>v===1).length;
+  return {yes, cnt:n.length, pct:n.length? yes/n.length : null};
+}
+function side(g,s,sid){
+  const R = rec(g,s), W = S.settings.w, mode = gradeOf(g).mode;
+  const p = {hw:hwStats(R,sid).pct, tr:trPct(R,sid,mode), rs:rsPct(R,sid), cl:clStats(R,sid).pct};
+  const out = {};
+  for(const k of ['hw','tr','rs','cl']) out[k] = p[k]===null? null : r1(p[k]*W[k]);
+  const q = R.side.q[sid]||[]; let qs=0, qm=0;
+  q.forEach((v,i)=>{ if(isNum(v)){ qs+=v; qm+=(+S.settings.qmax[i]||0); } });
+  out.pp = qm? r1(qs/qm*W.pp) : null;
+  const c = R.side.c[sid]; out.co = isNum(c)? c : null;
+  const parts = ['hw','tr','rs','cl','pp','co'].map(k=>out[k]).filter(x=>x!==null);
+  out.total = parts.length? r1(parts.reduce((a,b)=>a+b,0)) : null;
+  out.max = ['hw','tr','rs','cl','pp','co'].reduce((a,k)=>a+(+W[k]||0),0);
+  return out;
+}
+
+/* ======================= أدوات العرض ======================= */
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pctTxt = p => p===null||p===undefined ? '—' : Math.round(p*100)+'%';
+const badgeCls = p => p===null? '' : p>=.8?'hi': p>=.6?'mid':'lo';
+function badge(p, txt){ return `<span class="badge ${badgeCls(p)}">${txt ?? pctTxt(p)}</span>`; }
+const SYM = v => v===1?'✓':v===0?'✗':v===2?'○':v==='غ'?'غ':'';
+const CLS = v => v===1?'ok':v===0?'bad':v===2?'part':v==='غ'?'abs':'';
+const RCLS = v => isNum(v)? 'r'+v : '';
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'),2200); }
+function header(title, sub){ document.getElementById('hTitle').textContent=title; document.getElementById('hSub').textContent=sub||''; document.getElementById('backBtn').style.visibility = view.name==='home'?'hidden':'visible'; }
+function gradeLine(g){ const G=gradeOf(g); return `الصف ${G.name} / ${S.grades[g].section}`; }
+function weekIndexToday(){
+  const st = new Date(S.settings.semStart+'T00:00:00'); const d = Math.floor((Date.now()-st.getTime())/86400000);
+  const n = S.settings.weeks.length; if(isNaN(d)) return 0; return Math.max(0, Math.min(n-1, Math.floor(d/7)));
+}
+function monthIndexToday(){
+  const nw=S.settings.weeks.length, nm=S.settings.months.length;
+  return Math.max(0, Math.min(nm-1, Math.floor(weekIndexToday()/(nw/nm))));
+}
+
+/* ======================= التنقل ======================= */
+let view = {name:'home'};
+function go(v, replace){ view = v; history[replace?'replaceState':'pushState'](v,''); render(); if(!replace) window.scrollTo(0,0); }
+window.addEventListener('popstate', e => { view = e.state || {name:'home'}; render(); });
+
+/* ======================= الشاشات ======================= */
+function render(){
+  const app = document.getElementById('app');
+  const V = {home:vHome, rec:vRec, student:vStudent, students:vStudents, settings:vSettings}[view.name] || vHome;
+  app.innerHTML = V();
+}
+
+function vHome(){
+  header('سجلي', S.settings.school);
+  let h = '';
+  const total = GRADES.reduce((a,G)=>a+studs(G.key).length,0);
+  if(!total){
+    h += `<div class="card"><h2>ابدأ من هنا</h2>
+      <p class="muted">لا توجد أسماء طلاب بعد. استورد ملف البداية (بيانات البداية - الطلاب.json) أو أضف الأسماء يدوياً من زر «الطلاب» في كل صف.</p>
+      <button class="btn pri" data-act="restore">استيراد ملف البيانات</button></div>`;
+  }
+  const lb = S.lastBackup ? Math.floor((Date.now()-S.lastBackup)/86400000) : null;
+  if(total && (lb===null || lb>=7)){
+    h += `<div class="warn">${lb===null?'لم تحفظ أي نسخة احتياطية بعد.':`آخر نسخة احتياطية قبل ${lb} يوماً.`} البيانات محفوظة على هذا الجهاز فقط.
+      <div style="margin-top:8px"><button class="btn pri sm" data-act="backup">حفظ نسخة احتياطية الآن</button></div></div>`;
+  }
+  for(const G of GRADES){
+    const n = studs(G.key).length;
+    h += `<div class="card"><div class="row"><h2 class="grow">${esc(gradeLine(G.key))}</h2><span class="muted">${n} طالباً</span></div>
+      <div class="chips" style="margin:6px 0 10px">${G.subjects.map(s=>`<button class="subj" style="background:${SUBJ[s].color}" data-act="open" data-g="${G.key}" data-s="${s}">${SUBJ[s].full}</button>`).join('')}</div>
+      <div class="row"><button class="btn sm" data-act="students" data-g="${G.key}">👥 الطلاب</button>
+      <button class="btn sm" data-act="export" data-g="${G.key}">⬇ تصدير Excel</button>
+      <span class="muted grow" style="text-align:left">${G.mode==='weekly'?'متابعة أسبوعية':'متابعة شهرية'}</span></div></div>`;
+  }
+  h += `<p class="hint" style="text-align:center">يعمل بدون إنترنت · البيانات على هذا الجهاز فقط</p>`;
+  return h;
+}
+
+const TABS = [['hw','الواجبات'],['tr','المتابعة'],['rs','سلم التقدير'],['cl','قائمة الرصد'],['side','الجانبي']];
+function vRec(){
+  const {g,s} = view; const tab = view.tab||'hw';
+  header(SUBJ[s].full, gradeLine(g));
+  let h = `<div class="tabs">${TABS.map(([k,t])=>`<button class="tab ${tab===k?'on':''}" data-act="tab" data-t="${k}">${t}</button>`).join('')}</div>`;
+  const list = studs(g);
+  if(!list.length) return h + `<div class="card"><p class="muted">لا يوجد طلاب في هذا الصف.</p><button class="btn pri" data-act="students" data-g="${g}">إضافة الطلاب</button></div>`;
+  h += ({hw:tHw, tr:tTr, rs:tRs, cl:tCl, side:tSide})[tab](g,s,list);
+  return h;
+}
+
+/* ---------- الواجبات ---------- */
+function tHw(g,s,list){
+  const R = rec(g,s); const items = R.hw.items;
+  if(view.i===undefined){ let last=0; items.forEach((it,i)=>{ if(it.date||it.title||list.some(st=>(R.hw.m[st.id]||{})[i]!==undefined)) last=i; }); view.i=last; history.replaceState(view,''); }
+  const i = Math.min(view.i, items.length-1);
+  const it = items[i];
+  const filled = k => list.length && list.every(st=>(R.hw.m[st.id]||{})[k]!==undefined);
+  let h = `<div class="scroller">${items.map((x,k)=>`<button class="pchip ${k===i?'on':''} ${filled(k)?'done':''}" data-act="sel" data-k="i" data-v="${k}"><b>و${k+1}</b><small>${esc(x.date? x.date.slice(5).split('-').reverse().join('/') : '—')}</small></button>`).join('')}
+    <button class="pchip" data-act="hwAdd"><b>+</b><small>واجب</small></button></div>`;
+  h += `<div class="card" style="padding:10px 12px"><div class="grid2">
+    <div class="field" style="margin:0"><label>تاريخ الواجب ${i+1}</label><input type="date" data-in="hwDate" value="${esc(it.date)}"></div>
+    <div class="field" style="margin:0"><label>الصفحة / الموضوع</label><input type="text" data-in="hwTitle" value="${esc(it.title)}" placeholder="مثال: ص 45 س 3"></div></div>
+    <div class="bar"><button class="btn sm pri" data-act="hwFill">تعبئة الفارغ بـ ✓</button><button class="btn sm" data-act="hwClear">مسح هذا الواجب</button>
+    <span class="muted grow" style="text-align:left">${hwSummary(R,list,i)}</span></div>
+    <div class="legend">اضغط الرمز لاختياره، واضغطه مرة ثانية لإلغائه: <b>✓</b> أنجز · <b>○</b> جزئي · <b>✗</b> لم ينجز · <b>غ</b> غائب (لا يُحسب عليه)</div></div>`;
+  h += `<div class="list">${list.map((st,n)=>{
+    const v = (R.hw.m[st.id]||{})[i]; const p = hwStats(R,st.id).pct;
+    return `<div class="st"><span class="n">${n+1}</span><button class="nm" data-act="prof" data-sid="${st.id}">${esc(st.name)}</button>
+      <span class="cells seg">${[1,2,0,'غ'].map(c=>`<button class="c ${CLS(c)} ${v===c?'sel':''}" data-act="hw" data-sid="${st.id}" data-v="${c}">${SYM(c)}</button>`).join('')}</span>${badge(p)}</div>`;
+  }).join('')}</div>`;
+  return h;
+}
+function cnts(a){ return ['✓','○','✗','غ'].map((x,k)=>`<span class="cnt">${x} ${a[k]}</span>`).join(''); }
+function hwSummary(R,list,i){
+  let a=[0,0,0,0]; list.forEach(st=>{ const v=(R.hw.m[st.id]||{})[i]; if(v===1)a[0]++; else if(v===2)a[1]++; else if(v===0)a[2]++; else if(v==='غ')a[3]++; });
+  return cnts(a);
+}
+
+/* ---------- المتابعة ---------- */
+function tTr(g,s,list){
+  const R = rec(g,s); const mode = gradeOf(g).mode;
+  const periods = mode==='weekly' ? S.settings.weeks : S.settings.months;
+  if(view.p===undefined){ view.p = mode==='weekly'? weekIndexToday() : monthIndexToday(); history.replaceState(view,''); }
+  const p = Math.min(view.p, periods.length-1);
+  const filled = k => list.length && list.every(st=>{ const a=(R.tr.m[st.id]||{})[k]; return a && a.every(v=>v!==null&&v!==undefined); });
+  let h = `<div class="scroller">${periods.map((lab,k)=>`<button class="pchip ${k===p?'on':''} ${filled(k)?'done':''}" data-act="sel" data-k="p" data-v="${k}"><b>${mode==='weekly'?'أ'+(k+1):'ش'+(k+1)}</b><small dir="ltr">${esc(lab)}</small></button>`).join('')}</div>`;
+  h += `<div class="card" style="padding:10px 12px"><div class="row"><b class="grow">${mode==='weekly'?'الأسبوع '+(p+1):'الشهر '+(p+1)}: <bdi dir="ltr">${esc(periods[p])}</bdi></b></div>
+    <div class="bar"><button class="btn sm pri" data-act="trFill">${mode==='weekly'?'تعبئة الفارغ بـ ✓':'تعبئة الفارغ بـ 4'}</button><button class="btn sm" data-act="trClear">مسح ${mode==='weekly'?'الأسبوع':'الشهر'}</button></div>
+    <div class="legend">${mode==='weekly'
+      ? 'كل ضغطة تغيّر الخانة: فارغ ← <b>✓</b> ملتزم ← <b>✗</b> غير ملتزم ← <b>غ</b> غائب ← فارغ'
+      : 'كل ضغطة تغيّر التقدير: فارغ ← <b>4</b> دائماً ← <b>3</b> غالباً ← <b>2</b> أحياناً ← <b>1</b> نادراً ← فارغ'}
+      <br><b>ك</b> الكتاب · <b>د</b> الدفتر · <b>أ</b> الأدوات · <b>س</b> السلوك</div></div>`;
+  h += `<div class="list">${list.map((st,n)=>{
+    const a = (R.tr.m[st.id]||{})[p] || [null,null,null,null];
+    const cells = a.map((v,k)=> mode==='weekly'
+      ? `<button class="c ${CLS(v)}" data-act="tr" data-sid="${st.id}" data-c="${k}"><span class="lb">${TRACK_S[k]}</span>${SYM(v)}</button>`
+      : `<button class="c ${RCLS(v)}" data-act="tr" data-sid="${st.id}" data-c="${k}"><span class="lb">${TRACK_S[k]}</span>${isNum(v)?v:''}</button>`).join('');
+    return `<div class="st"><span class="n">${n+1}</span><button class="nm" data-act="prof" data-sid="${st.id}">${esc(st.name)}</button><span class="cells">${cells}</span>${badge(trPct(R,st.id,mode))}</div>`;
+  }).join('')}</div>`;
+  return h;
+}
+
+/* ---------- سلم التقدير ---------- */
+function tRs(g,s,list){
+  const R = rec(g,s); const t = view.t||0; const T = R.rs.tasks[t];
+  let h = `<div class="bar">${R.rs.tasks.map((x,k)=>`<button class="chip ${k===t?'on':''}" data-act="sel" data-k="t" data-v="${k}">المهمة ${k+1}</button>`).join('')}</div>`;
+  h += `<div class="card" style="padding:10px 12px">
+    <div class="field" style="margin-top:0"><label>عنوان المهمة الأدائية ${t+1} وتاريخها</label><input type="text" data-in="rsTitle" value="${esc(T.title)}" placeholder="مثال: تحليل بيانات محاكاة الاحتكاك — 12/10"></div>
+    <div class="legend">${T.crit.map((c,k)=>`<b>${k+1}</b> ${esc(c)}`).join(' · ')}<br>كل ضغطة: فارغ ← <b>4</b> ممتاز ← <b>3</b> جيد ← <b>2</b> مقبول ← <b>1</b> ضعيف ← فارغ</div>
+    <details style="margin-top:6px"><summary>تعديل نص المعايير</summary>${T.crit.map((c,k)=>`<div class="field"><label>المعيار ${k+1}</label><input type="text" data-in="rsCrit" data-c="${k}" value="${esc(c)}"></div>`).join('')}</details></div>`;
+  h += `<div class="list">${list.map((st,n)=>{
+    const a = ((R.rs.m[st.id]||{})[t]) || [];
+    const cells = T.crit.map((_,k)=>`<button class="c ${RCLS(a[k])}" data-act="rs" data-sid="${st.id}" data-c="${k}"><span class="lb">${k+1}</span>${isNum(a[k])?a[k]:''}</button>`).join('');
+    const tot = rsTask(R,st.id,t);
+    return `<div class="st stack"><span class="n">${n+1}</span><button class="nm" data-act="prof" data-sid="${st.id}">${esc(st.name)}</button>${badge(tot===null?null:tot/20, tot===null?'—':tot+'/20')}<span class="cells">${cells}</span></div>`;
+  }).join('')}</div>`;
+  return h;
+}
+
+/* ---------- قائمة الرصد ---------- */
+function tCl(g,s,list){
+  const R = rec(g,s); const C = R.cl;
+  let h = `<div class="card" style="padding:10px 12px">
+    <div class="field" style="margin-top:0"><label>النشاط أو المهارة المرصودة وتاريخها</label><input type="text" data-in="clTitle" value="${esc(C.title)}"></div>
+    <div class="legend">${C.crit.map((c,k)=>`<b>${k+1}</b> ${esc(c)}`).join(' · ')}<br>كل ضغطة: فارغ ← <b>✓</b> تحقق ← <b>✗</b> لم يتحقق ← <b>غ</b> غائب ← فارغ</div>
+    <div class="bar"><button class="btn sm pri" data-act="clFill">تعبئة الفارغ بـ ✓</button></div>
+    <details><summary>تعديل نص المعايير</summary>${C.crit.map((c,k)=>`<div class="field"><label>المعيار ${k+1}</label><input type="text" data-in="clCrit" data-c="${k}" value="${esc(c)}"></div>`).join('')}</details></div>`;
+  h += `<div class="list">${list.map((st,n)=>{
+    const a = C.m[st.id]||[]; const cs = clStats(R,st.id);
+    const cells = C.crit.map((_,k)=>`<button class="c sm ${CLS(a[k])}" data-act="cl" data-sid="${st.id}" data-c="${k}"><span class="lb">${k+1}</span>${SYM(a[k])}</button>`).join('');
+    return `<div class="st stack"><span class="n">${n+1}</span><button class="nm" data-act="prof" data-sid="${st.id}">${esc(st.name)}</button>${badge(cs.pct, cs.cnt? cs.yes+'/'+cs.cnt : '—')}<span class="cells">${cells}</span></div>`;
+  }).join('')}</div>`;
+  return h;
+}
+
+/* ---------- العلامات الجانبية ---------- */
+function tSide(g,s,list){
+  const R = rec(g,s), W = S.settings.w, Q = S.settings.qmax;
+  const max = ['hw','tr','rs','cl','pp','co'].reduce((a,k)=>a+(+W[k]||0),0);
+  let h = `<div class="card" style="padding:10px 12px"><div class="legend">
+    ${['hw','tr','rs','cl','pp','co'].map(k=>`<b>${W_SHORT[k]}</b> ${W_LABELS[k]} (${W[k]})`).join(' · ')} — المجموع من <b>${max}</b>
+    <br>و، م، أ، ر تُحسب تلقائياً من السجلات. أدخل الاختبارات القصيرة (ق1–ق3) والتواصل. المكوّن الفارغ يُحسب صفراً في المجموع.</div>
+    <div class="bar"><button class="btn sm" data-act="settings">تعديل التوزيع</button></div></div>`;
+  h += `<div class="list">${list.map((st,n)=>{
+    const o = side(g,s,st.id); const q = R.side.q[st.id]||[]; const c = R.side.c[st.id];
+    return `<div class="sidecard" id="sc-${st.id}"><div class="row"><span class="n muted" style="width:22px;text-align:center">${n+1}</span>
+      <button class="nm grow" style="background:none;border:0;text-align:right;font-size:14px;padding:0;cursor:pointer" data-act="prof" data-sid="${st.id}">${esc(st.name)}</button>
+      <span class="total" data-tot>${o.total===null?'—':o.total}<small class="muted">/${max}</small></span></div>
+      <div class="comp" data-comp>${compHtml(o)}</div>
+      <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap">
+        ${[0,1,2].map(k=>`<label class="muted" style="display:flex;align-items:center;gap:3px">ق${k+1}<input class="num" type="number" inputmode="decimal" min="0" max="${Q[k]}" step="0.5" data-in="q" data-sid="${st.id}" data-c="${k}" value="${isNum(q[k])?q[k]:''}" placeholder="/${Q[k]}"></label>`).join('')}
+        <label class="muted" style="display:flex;align-items:center;gap:3px">ت<input class="num" type="number" inputmode="decimal" min="0" max="${W.co}" step="0.5" data-in="co" data-sid="${st.id}" value="${isNum(c)?c:''}" placeholder="/${W.co}"></label>
+      </div></div>`;
+  }).join('')}</div>`;
+  return h;
+}
+function compHtml(o){
+  const W = S.settings.w;
+  return ['hw','tr','rs','cl','pp','co'].map(k=>`<span>${W_SHORT[k]}: <b>${o[k]===null?'—':o[k]}</b>/${W[k]}</span>`).join('');
+}
+
+/* ---------- ملف الطالب ---------- */
+function vStudent(){
+  const {g,sid} = view; const st = studs(g).find(x=>x.id===sid);
+  if(!st){ return '<div class="card">الطالب غير موجود.</div>'; }
+  const G = gradeOf(g);
+  header(st.name, gradeLine(g));
+  let h = `<div class="card"><h2>ملخص الأداء</h2><table class="pf"><tr><th>المبحث</th><th>واجبات</th><th>متابعة</th><th>أداء</th><th>رصد</th><th>جانبي</th></tr>`;
+  for(const s of G.subjects){
+    const R = rec(g,s); const o = side(g,s,sid);
+    h += `<tr><td><b style="color:${SUBJ[s].color}">${SUBJ[s].full}</b></td><td>${pctTxt(hwStats(R,sid).pct)}</td><td>${pctTxt(trPct(R,sid,G.mode))}</td><td>${pctTxt(rsPct(R,sid))}</td><td>${pctTxt(clStats(R,sid).pct)}</td><td><b>${o.total===null?'—':o.total}</b>/${o.max}</td></tr>`;
+  }
+  h += `</table></div>`;
+  for(const s of G.subjects){
+    const R = rec(g,s); const hs = hwStats(R,sid); const per = trPer(R,sid,G.mode);
+    h += `<div class="card"><h2 style="color:${SUBJ[s].color}">${SUBJ[s].full}</h2>
+      <div class="kv"><span>الواجبات</span><span>${cnts([hs.done,hs.part,hs.no,hs.abs])}</span></div>
+      ${TRACK.map((t,k)=>`<div class="kv"><span>${t}</span><span>${per[k]===null?'—':G.mode==='weekly'?pctTxt(per[k]):per[k].toFixed(1)+' من 4'}</span></div>`).join('')}
+      <div class="kv"><span>سلم التقدير</span><span>${[0,1].map(t=>{const x=rsTask(R,sid,t);return x===null?'—':x+'/20';}).join(' · ')} ${rsGrade(rsPct(R,sid))}</span></div></div>`;
+  }
+  h += `<div class="card"><h2>ملاحظات عن الطالب</h2><textarea data-in="note" data-sid="${sid}" placeholder="ملاحظات سلوكية، تواصل مع ولي الأمر، خطة علاجية...">${esc(S.notes[sid]||'')}</textarea></div>`;
+  return h;
+}
+
+/* ---------- الطلاب ---------- */
+function vStudents(){
+  const {g} = view; const list = studs(g);
+  header('طلاب الصف '+gradeOf(g).name, list.length+' طالباً');
+  let h = `<div class="card"><div class="grid2"><div class="field" style="margin:0"><label>الشعبة</label><input type="text" data-in="section" value="${esc(S.grades[g].section)}"></div>
+    <div class="field" style="margin:0"><label>إضافة طالب</label><div class="row"><input type="text" id="newName" placeholder="الاسم الرباعي"><button class="btn pri" data-act="addSt">+</button></div></div></div></div>`;
+  h += `<div class="list">${list.map((st,n)=>`<div class="st"><span class="n">${n+1}</span><input type="text" data-in="stName" data-sid="${st.id}" value="${esc(st.name)}" style="flex:1">
+    <button class="btn sm danger" data-act="delSt" data-sid="${st.id}" aria-label="حذف">✕</button></div>`).join('') || '<div class="st muted">لا يوجد طلاب.</div>'}</div>`;
+  h += `<div class="card"><details><summary>لصق قائمة أسماء دفعة واحدة</summary>
+    <p class="hint">اسم في كل سطر. تُضاف الأسماء إلى نهاية القائمة.</p><textarea id="bulk"></textarea>
+    <div class="bar"><button class="btn pri" data-act="bulkAdd">إضافة الأسماء</button></div></details>
+    <div class="bar"><button class="btn sm" data-act="sortSt">ترتيب أبجدي</button></div>
+    <p class="hint">حذف الطالب يخفيه من كل السجلات. إن أعدت إضافته يبدأ بسجل فارغ.</p></div>`;
+  return h;
+}
+
+/* ---------- الإعدادات ---------- */
+function vSettings(){
+  header('الإعدادات والنسخ الاحتياطي');
+  const T = S.settings, W = T.w;
+  const lb = S.lastBackup ? new Date(S.lastBackup).toLocaleString('ar-JO') : 'لم تُحفظ بعد';
+  let h = `<div class="card"><h2>النسخ الاحتياطي</h2>
+    <p class="muted">البيانات محفوظة في هذا المتصفح على هذا الجهاز فقط. احفظ نسخة أسبوعياً وأرسلها لنفسك (واتساب أو Drive أو اللابتوب). آخر نسخة: <b>${esc(lb)}</b></p>
+    <div class="bar"><button class="btn pri" data-act="backup">حفظ نسخة احتياطية</button><button class="btn" data-act="restore">استرجاع من ملف</button></div>
+    <p class="hint">الاسترجاع يستبدل كل البيانات الحالية بمحتوى الملف. استعمله أيضاً لنقل البيانات بين الهاتف واللابتوب.</p></div>`;
+  h += `<div class="card"><h2>بيانات الترويسة</h2>
+    ${[['school','المدرسة'],['teacher','المعلم'],['year','العام الدراسي'],['sem','الفصل الدراسي']].map(([k,l])=>`<div class="field"><label>${l}</label><input type="text" data-in="set" data-k="${k}" value="${esc(T[k])}"></div>`).join('')}</div>`;
+  h += `<div class="card"><h2>توزيع العلامة الجانبية</h2><p class="hint">قيم مقترحة مجموعها 20 — عدّلها بما يوافق التوزيع المعتمد في مدرستك. ينطبق على كل المباحث.</p>
+    <div class="grid2">${['hw','tr','rs','cl','pp','co'].map(k=>`<div class="field"><label>${W_LABELS[k]}</label><input type="number" inputmode="decimal" min="0" step="0.5" data-in="w" data-k="${k}" value="${W[k]}"></div>`).join('')}</div>
+    <p class="muted">المجموع: <b id="wsum">${['hw','tr','rs','cl','pp','co'].reduce((a,k)=>a+(+W[k]||0),0)}</b></p>
+    <div class="grid3">${[0,1,2].map(k=>`<div class="field"><label>العظمى لقصير ${k+1}</label><input type="number" inputmode="decimal" min="1" data-in="qmax" data-k="${k}" value="${T.qmax[k]}"></div>`).join('')}</div></div>`;
+  h += `<div class="card"><h2>الأسابيع والأشهر</h2>
+    <div class="field"><label>تاريخ أول يوم في الفصل (لاختيار الأسبوع الحالي تلقائياً)</label><input type="date" data-in="semStart" value="${esc(T.semStart)}"></div>
+    <div class="field"><label>أسابيع المتابعة الأسبوعية (أسبوع في كل سطر)</label><textarea data-in="weeks" rows="6">${esc(T.weeks.join('\n'))}</textarea></div>
+    <div class="field"><label>أشهر المتابعة الشهرية (شهر في كل سطر)</label><textarea data-in="months" rows="4">${esc(T.months.join('\n'))}</textarea></div>
+    <p class="hint">للفصل الثاني: احفظ نسخة احتياطية أولاً، ثم عدّل الأسابيع والأشهر، ثم امسح السجلات من الزر أدناه.</p></div>`;
+  h += `<div class="card"><h2>بدء فصل جديد</h2><p class="muted">يمسح كل الرصد والعلامات ويُبقي الطلاب والإعدادات.</p>
+    <button class="btn danger" data-act="wipeRec">مسح كل السجلات</button></div>`;
+  h += `<p class="hint" style="text-align:center">سجلي — الإصدار ${APP_VERSION}</p>`;
+  return h;
+}
+
+/* ======================= الأحداث ======================= */
+function cycle(v, seq){ const i = seq.findIndex(x=>x===v); return seq[(i+1)%seq.length]; }
+const SEQ_CODE = [null,1,0,'غ'];
+const SEQ_RATE = [null,4,3,2,1];
+function parseV(v){ return v==='غ' ? 'غ' : +v; }
+function keep(fn){ const y = window.scrollY; fn(); save(); render(); window.scrollTo(0,y); }
+
+const ACT = {
+  back(){ history.length>1 ? history.back() : go({name:'home'}); },
+  home(){ go({name:'home'}); },
+  settings(){ go({name:'settings'}); },
+  open(d){ go({name:'rec', g:d.g, s:d.s, tab:'hw'}); },
+  students(d){ go({name:'students', g:d.g}); },
+  prof(d){ go({name:'student', g:view.g, sid:d.sid}); },
+  tab(d){ view = Object.assign({}, view, {tab:d.t}); delete view.i; delete view.p; go(view, true); window.scrollTo(0,0); },
+  sel(d){ view = Object.assign({}, view, {[d.k]:+d.v}); go(view, true); },
+  hw(d){ keep(()=>{ const R=rec(view.g,view.s); const m=R.hw.m[d.sid]||(R.hw.m[d.sid]={}); const v=parseV(d.v); if(m[view.i]===v) delete m[view.i]; else m[view.i]=v; }); },
+  hwFill(){ keep(()=>{ const R=rec(view.g,view.s); studs(view.g).forEach(st=>{ const m=R.hw.m[st.id]||(R.hw.m[st.id]={}); if(m[view.i]===undefined) m[view.i]=1; }); }); },
+  hwClear(){ if(!confirm('مسح رصد هذا الواجب لكل الطلاب؟')) return; keep(()=>{ const R=rec(view.g,view.s); for(const k in R.hw.m) delete R.hw.m[k][view.i]; }); },
+  hwAdd(){ const R=rec(view.g,view.s); R.hw.items.push({date:'',title:''}); save(); view=Object.assign({},view,{i:R.hw.items.length-1}); go(view,true); },
+  tr(d){ keep(()=>{ const R=rec(view.g,view.s); const mode=gradeOf(view.g).mode; const m=R.tr.m[d.sid]||(R.tr.m[d.sid]={}); const a=m[view.p]||(m[view.p]=[null,null,null,null]); a[+d.c]=cycle(a[+d.c]??null, mode==='weekly'?SEQ_CODE:SEQ_RATE); }); },
+  trFill(){ keep(()=>{ const R=rec(view.g,view.s); const full=gradeOf(view.g).mode==='weekly'?1:4; studs(view.g).forEach(st=>{ const m=R.tr.m[st.id]||(R.tr.m[st.id]={}); const a=m[view.p]||(m[view.p]=[null,null,null,null]); for(let k=0;k<4;k++) if(a[k]===null||a[k]===undefined) a[k]=full; }); }); },
+  trClear(){ if(!confirm('مسح رصد هذه الفترة لكل الطلاب؟')) return; keep(()=>{ const R=rec(view.g,view.s); for(const k in R.tr.m) delete R.tr.m[k][view.p]; }); },
+  rs(d){ keep(()=>{ const R=rec(view.g,view.s); const t=view.t||0; const m=R.rs.m[d.sid]||(R.rs.m[d.sid]={}); const a=m[t]||(m[t]=[]); a[+d.c]=cycle(a[+d.c]??null, SEQ_RATE); }); },
+  cl(d){ keep(()=>{ const R=rec(view.g,view.s); const a=R.cl.m[d.sid]||(R.cl.m[d.sid]=[]); a[+d.c]=cycle(a[+d.c]??null, SEQ_CODE); }); },
+  clFill(){ keep(()=>{ const R=rec(view.g,view.s); studs(view.g).forEach(st=>{ const a=R.cl.m[st.id]||(R.cl.m[st.id]=[]); for(let k=0;k<R.cl.crit.length;k++) if(a[k]===null||a[k]===undefined) a[k]=1; }); }); },
+  addSt(){ const el=document.getElementById('newName'); const n=el.value.trim(); if(!n) return; studs(view.g).push({id:uid(),name:n}); save(); render(); document.getElementById('newName').focus(); },
+  delSt(d){ const st=studs(view.g).find(x=>x.id===d.sid); if(!st||!confirm('حذف الطالب «'+st.name+'»؟')) return; S.grades[view.g].students=studs(view.g).filter(x=>x.id!==d.sid); save(); render(); },
+  bulkAdd(){ const t=document.getElementById('bulk').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean); if(!t.length) return; t.forEach(n=>studs(view.g).push({id:uid(),name:n})); save(); render(); toast('أضيف '+t.length+' طالباً'); },
+  sortSt(){ studs(view.g).sort((a,b)=>a.name.localeCompare(b.name,'ar')); save(); render(); },
+  backup(){ doBackup(); },
+  restore(){ document.getElementById('fileIn').click(); },
+  export(d){ exportGrade(d.g); },
+  wipeRec(){ if(!confirm('سيُمسح كل الرصد والعلامات في كل الصفوف. هل حفظت نسخة احتياطية؟')) return; if(!confirm('تأكيد نهائي: مسح كل السجلات؟')) return; S.rec={}; save(); toast('تم مسح السجلات'); go({name:'home'}); }
+};
+document.addEventListener('click', e=>{ const b=e.target.closest('[data-act]'); if(!b) return; const f=ACT[b.dataset.act]; if(f) f(b.dataset, b); });
+document.addEventListener('keydown', e=>{ if(e.key==='Enter' && e.target.id==='newName') ACT.addSt(); });
+
+/* حقول الإدخال: تُحفظ دون إعادة رسم الشاشة حتى لا يضيع التركيز */
+document.addEventListener('change', e=>{
+  const el=e.target, d=el.dataset; if(!d.in) return; const T=S.settings;
+  const num = () => { const x=el.value.trim()===''? null : +el.value; return (x===null||isNaN(x))? null : x; };
+  switch(d.in){
+    case 'hwDate': rec(view.g,view.s).hw.items[view.i].date = el.value; save(); render(); return;
+    case 'hwTitle': rec(view.g,view.s).hw.items[view.i].title = el.value; break;
+    case 'rsTitle': rec(view.g,view.s).rs.tasks[view.t||0].title = el.value; break;
+    case 'rsCrit': rec(view.g,view.s).rs.tasks[view.t||0].crit[+d.c] = el.value; save(); render(); return;
+    case 'clTitle': rec(view.g,view.s).cl.title = el.value; break;
+    case 'clCrit': rec(view.g,view.s).cl.crit[+d.c] = el.value; save(); render(); return;
+    case 'q': case 'co': {
+      const R=rec(view.g,view.s); let x=num(); const mx = d.in==='q'? +T.qmax[+d.c] : +T.w.co;
+      if(x!==null && (x<0 || x>mx)){ toast('العلامة يجب أن تكون بين 0 و'+mx); el.value=''; x=null; }
+      if(d.in==='q'){ const q=R.side.q[d.sid]||(R.side.q[d.sid]=[null,null,null]); q[+d.c]=x; } else { if(x===null) delete R.side.c[d.sid]; else R.side.c[d.sid]=x; }
+      save();
+      const o=side(view.g,view.s,d.sid); const card=document.getElementById('sc-'+d.sid);
+      if(card){ card.querySelector('[data-comp]').innerHTML=compHtml(o); card.querySelector('[data-tot]').innerHTML=(o.total===null?'—':o.total)+`<small class="muted">/${o.max}</small>`; }
+      return; }
+    case 'note': S.notes[d.sid]=el.value; break;
+    case 'section': S.grades[view.g].section = el.value.trim()||'أ'; break;
+    case 'stName': { const st=studs(view.g).find(x=>x.id===d.sid); if(st && el.value.trim()) st.name=el.value.trim(); break; }
+    case 'set': T[d.k]=el.value; break;
+    case 'w': T.w[d.k] = num() ?? 0; document.getElementById('wsum').textContent=['hw','tr','rs','cl','pp','co'].reduce((a,k)=>a+(+T.w[k]||0),0); break;
+    case 'qmax': T.qmax[+d.k] = Math.max(1, num() ?? 10); break;
+    case 'semStart': T.semStart = el.value; break;
+    case 'weeks': { const a=el.value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean); if(a.length) T.weeks=a; break; }
+    case 'months': { const a=el.value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean); if(a.length) T.months=a; break; }
+  }
+  save(); toast('حُفظ');
+});
+
+/* ======================= النسخ الاحتياطي ======================= */
+function stamp(){ const d=new Date(); const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
+async function deliver(blob, name, preferShare){
+  const file = new File([blob], name, {type:blob.type});
+  if(preferShare && navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file], title:name}); return true; }
+    catch(e){ if(e.name==='AbortError') return false; }
+  }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1500); return true;
+}
+async function doBackup(){
+  const data = JSON.stringify(Object.assign({}, S, {savedAt:new Date().toISOString()}));
+  const ok = await deliver(new Blob([data],{type:'application/json'}), `سجلي - نسخة احتياطية ${stamp()}.json`, true);
+  if(ok){ S.lastBackup = Date.now(); save(); toast('حُفظت النسخة الاحتياطية'); render(); }
+}
+document.getElementById('fileIn').addEventListener('change', async e=>{
+  const f=e.target.files[0]; e.target.value=''; if(!f) return;
+  try{
+    const d=JSON.parse(await f.text());
+    if(d.app!=='sijil') throw new Error('bad');
+    const has = GRADES.some(G=>studs(G.key).length) || Object.keys(S.rec).length;
+    if(has && !confirm('سيستبدل الملف كل البيانات الحالية على هذا الجهاز. متابعة؟')) return;
+    S=d; migrate(); save(); toast('تم الاسترجاع'); go({name:'home'});
+  }catch(err){ alert('الملف غير صالح. اختر ملف نسخة احتياطية من «سجلي».'); }
+});
+
+/* ======================= تصدير Excel ======================= */
+function exportGrade(g){
+  if(typeof XLSX==='undefined'){ alert('مكتبة Excel لم تُحمَّل بعد. انتظر ثانية وحاول مجدداً.'); return; }
+  const G=gradeOf(g), T=S.settings, W=T.w, list=studs(g);
+  if(!list.length){ toast('لا يوجد طلاب'); return; }
+  const wb = XLSX.utils.book_new(); wb.Workbook={Views:[{RTL:true}]};
+  const P = x => x===null||x===undefined ? '' : {v:x,t:'n',z:'0%'};
+  const V = x => x===null||x===undefined ? '' : x;
+  const info = s => `المدرسة: ${T.school}   المبحث: ${SUBJ[s].full}   الصف: ${G.name} / ${S.grades[g].section}   الفصل: ${T.sem}   العام: ${T.year}   المعلم: ${T.teacher}`;
+  const add = (name, title, s, head, head2, rows, widths) => {
+    const aoa = [[title],[info(s)],[], head]; if(head2) aoa.push(head2); rows.forEach(r=>aoa.push(r));
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = widths.map(w=>({wch:w}));
+    ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:Math.min(head.length-1,12)}},{s:{r:1,c:0},e:{r:1,c:Math.min(head.length-1,12)}}];
+    XLSX.utils.book_append_sheet(wb, ws, name.slice(0,31));
+  };
+  for(const s of G.subjects){
+    const R = rec(g,s); const n = R.hw.items.length;
+    // الواجبات
+    add(`${s} - واجبات`, `سجل متابعة الواجبات — ${SUBJ[s].full}`, s,
+      ['م','اسم الطالب', ...R.hw.items.map((_,i)=>'و'+(i+1)), 'أنجز','جزئي','لم ينجز','غائب','نسبة الإنجاز'],
+      ['','التاريخ / الصفحة', ...R.hw.items.map(it=>[it.date,it.title].filter(Boolean).join(' ')), '','','','',''],
+      list.map((st,k)=>{ const m=R.hw.m[st.id]||{}; const h=hwStats(R,st.id); return [k+1, st.name, ...R.hw.items.map((_,i)=>SYM(m[i])), h.done,h.part,h.no,h.abs,P(h.pct)]; }),
+      [4,28,...Array(n).fill(5),7,7,7,7,10]);
+    // المتابعة
+    const per = G.mode==='weekly'? T.weeks : T.months; const pre = G.mode==='weekly'?'أ':'ش';
+    add(`${s} - متابعة`, `سجل المتابعة ${G.mode==='weekly'?'الأسبوعية':'الشهرية'}: الكتاب والدفتر والأدوات والسلوك — ${SUBJ[s].full}`, s,
+      ['م','اسم الطالب', ...per.flatMap((_,p)=>TRACK_S.map(c=>`${pre}${p+1} ${c}`)), ...TRACK.map(t=>t+(G.mode==='weekly'?' %':' (من 4)')), 'النسبة الكلية'],
+      ['','', ...per.flatMap(l=>[l,'','','']), '','','','',''],
+      list.map((st,k)=>{ const m=R.tr.m[st.id]||{}; const pr=trPer(R,st.id,G.mode);
+        return [k+1, st.name, ...per.flatMap((_,p)=>(m[p]||[null,null,null,null]).map(v=> G.mode==='weekly'? SYM(v) : V(v))),
+          ...pr.map(x=> G.mode==='weekly'? P(x) : (x===null?'':Math.round(x*10)/10)), P(trPct(R,st.id,G.mode))]; }),
+      [4,28,...Array(per.length*4).fill(4),9,9,9,9,10]);
+    // سلم التقدير
+    add(`${s} - سلم تقدير`, `سلم التقدير العددي للمهام الأدائية — ${SUBJ[s].full}`, s,
+      ['م','اسم الطالب', ...R.rs.tasks.flatMap((t,i)=>[...t.crit.map((_,k)=>`م${i+1}: ${k+1}`), `مجموع المهمة ${i+1} (20)`]), 'النسبة','التقدير'],
+      ['','المعايير', ...R.rs.tasks.flatMap(t=>[...t.crit, t.title||'']), '',''],
+      list.map((st,k)=>{ const m=R.rs.m[st.id]||{}; const p=rsPct(R,st.id);
+        return [k+1, st.name, ...R.rs.tasks.flatMap((t,i)=>[...t.crit.map((_,c)=>V((m[i]||[])[c])), V(rsTask(R,st.id,i))]), P(p), rsGrade(p)]; }),
+      [4,28,...Array(12).fill(9),8,10]);
+    // قائمة الرصد
+    add(`${s} - قائمة رصد`, `قائمة الرصد — ${SUBJ[s].full}${R.cl.title?' — '+R.cl.title:''}`, s,
+      ['م','اسم الطالب', ...R.cl.crit.map((_,k)=>'معيار '+(k+1)), 'عدد المتحقق','النسبة'],
+      ['','المعايير', ...R.cl.crit, '',''],
+      list.map((st,k)=>{ const a=R.cl.m[st.id]||[]; const c=clStats(R,st.id); return [k+1, st.name, ...R.cl.crit.map((_,i)=>SYM(a[i])), c.cnt?c.yes:'', P(c.pct)]; }),
+      [4,28,...Array(R.cl.crit.length).fill(11),9,8]);
+    // الجانبي
+    const max = ['hw','tr','rs','cl','pp','co'].reduce((a,k)=>a+(+W[k]||0),0);
+    add(`${s} - جانبي`, `سجل العلامات الجانبية — ${SUBJ[s].full}`, s,
+      ['م','اسم الطالب', W_LABELS.hw, W_LABELS.tr, W_LABELS.rs, W_LABELS.cl, 'قصير 1','قصير 2','قصير 3', W_LABELS.pp, W_LABELS.co, 'المجموع'],
+      ['','العلامة العظمى', W.hw, W.tr, W.rs, W.cl, T.qmax[0], T.qmax[1], T.qmax[2], W.pp, W.co, max],
+      list.map((st,k)=>{ const o=side(g,s,st.id); const q=R.side.q[st.id]||[]; return [k+1, st.name, V(o.hw),V(o.tr),V(o.rs),V(o.cl),V(q[0]),V(q[1]),V(q[2]),V(o.pp),V(o.co),V(o.total)]; }),
+      [4,28,12,12,12,12,8,8,8,12,12,10]);
+  }
+  const out = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+  deliver(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), `سجلات الصف ${G.name} - ${stamp()}.xlsx`, false)
+    .then(()=>toast('تم تصدير ملف Excel'));
+}
+
+/* ======================= التشغيل ======================= */
+load();
+history.replaceState(view,'');
+render();
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+if(navigator.storage && navigator.storage.persist){ navigator.storage.persist().catch(()=>{}); }
+</script>
+</body>
+</html>
