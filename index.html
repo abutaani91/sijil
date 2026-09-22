@@ -126,7 +126,7 @@ table.pf th:first-child,table.pf td:first-child{text-align:right}
 'use strict';
 /* ======================= ثوابت ======================= */
 const KEY = 'sijil-data-v1';
-const APP_VERSION = 1;
+const APP_VERSION = 2;
 const SUBJ = {
   'علوم':  {full:'العلوم', color:'#2E7D32'},
   'فيزياء':{full:'الفيزياء', color:'#1565C0'},
@@ -153,9 +153,9 @@ function defaultState(){
   return {
     app:'sijil', v:APP_VERSION,
     settings:{school:'رجم الشامي الشرقي الثانوية للبنين', teacher:'محمد الطعاني', year:'2026 / 2027', sem:'الأول',
-      semStart:'2026-08-23', w:{hw:4,tr:3,rs:4,cl:2,pp:5,co:2}, qmax:[10,10,10], weeks:DEF_WEEKS.slice(), months:DEF_MONTHS.slice()},
+      semStart:'2026-08-23', showSide:false, w:{hw:4,tr:3,rs:4,cl:2,pp:5,co:2}, qmax:[10,10,10], weeks:DEF_WEEKS.slice(), months:DEF_MONTHS.slice()},
     grades:{g8:{section:'أ',students:[]}, g9:{section:'أ',students:[]}, g10:{section:'أ',students:[]}},
-    rec:{}, notes:{}, lastBackup:null
+    rec:{}, notes:{}, pmsg:{}, sent:{}, lastBackup:null
   };
 }
 function newRecord(){
@@ -178,7 +178,7 @@ function migrate(){
   S.settings = Object.assign(d.settings, S.settings||{});
   S.settings.w = Object.assign(d.settings.w, S.settings.w||{});
   S.grades = Object.assign(d.grades, S.grades||{});
-  S.rec = S.rec||{}; S.notes = S.notes||{};
+  S.rec = S.rec||{}; S.notes = S.notes||{}; S.pmsg = S.pmsg||{}; S.sent = S.sent||{};
 }
 let saveErr = false;
 function save(){
@@ -269,7 +269,7 @@ window.addEventListener('popstate', e => { view = e.state || {name:'home'}; rend
 /* ======================= الشاشات ======================= */
 function render(){
   const app = document.getElementById('app');
-  const V = {home:vHome, rec:vRec, student:vStudent, students:vStudents, settings:vSettings}[view.name] || vHome;
+  const V = {home:vHome, rec:vRec, student:vStudent, students:vStudents, settings:vSettings, reports:vReports}[view.name] || vHome;
   app.innerHTML = V();
 }
 
@@ -291,9 +291,9 @@ function vHome(){
     const n = studs(G.key).length;
     h += `<div class="card"><div class="row"><h2 class="grow">${esc(gradeLine(G.key))}</h2><span class="muted">${n} طالباً</span></div>
       <div class="chips" style="margin:6px 0 10px">${G.subjects.map(s=>`<button class="subj" style="background:${SUBJ[s].color}" data-act="open" data-g="${G.key}" data-s="${s}">${SUBJ[s].full}</button>`).join('')}</div>
-      <div class="row"><button class="btn sm" data-act="students" data-g="${G.key}">👥 الطلاب</button>
-      <button class="btn sm" data-act="export" data-g="${G.key}">⬇ تصدير Excel</button>
-      <span class="muted grow" style="text-align:left">${G.mode==='weekly'?'متابعة أسبوعية':'متابعة شهرية'}</span></div></div>`;
+      <div class="row" style="flex-wrap:wrap"><button class="btn sm" data-act="students" data-g="${G.key}">👥 الطلاب</button>
+      <button class="btn sm" data-act="reports" data-g="${G.key}">📨 تقارير أولياء الأمور</button>
+      <button class="btn sm" data-act="export" data-g="${G.key}">⬇ Excel</button></div></div>`;
   }
   h += `<p class="hint" style="text-align:center">يعمل بدون إنترنت · البيانات على هذا الجهاز فقط</p>`;
   return h;
@@ -440,7 +440,14 @@ function vStudent(){
       ${TRACK.map((t,k)=>`<div class="kv"><span>${t}</span><span>${per[k]===null?'—':G.mode==='weekly'?pctTxt(per[k]):per[k].toFixed(1)+' من 4'}</span></div>`).join('')}
       <div class="kv"><span>سلم التقدير</span><span>${[0,1].map(t=>{const x=rsTask(R,sid,t);return x===null?'—':x+'/20';}).join(' · ')} ${rsGrade(rsPct(R,sid))}</span></div></div>`;
   }
-  h += `<div class="card"><h2>ملاحظات عن الطالب</h2><textarea data-in="note" data-sid="${sid}" placeholder="ملاحظات سلوكية، تواصل مع ولي الأمر، خطة علاجية...">${esc(S.notes[sid]||'')}</textarea></div>`;
+  const ph = waNum(st.phone); const txt = reportText(g,sid);
+  h += `<div class="card"><h2>تقرير ولي الأمر</h2>
+    <div class="field"><label>رسالة لولي الأمر (تظهر في آخر التقرير — اختياري)</label><textarea data-in="pmsg" data-sid="${sid}" style="min-height:60px" placeholder="مثال: نرجو متابعة حل الواجبات في البيت">${esc(S.pmsg[sid]||'')}</textarea></div>
+    <div class="bar">${ph?`<button class="btn pri" data-act="wa" data-g="${g}" data-sid="${sid}">إرسال على واتساب</button>`:`<button class="btn" data-act="students" data-g="${g}">أضف رقم ولي الأمر</button>`}
+      <button class="btn" data-act="shareImg" data-sid="${sid}">مشاركة كصورة</button><button class="btn" data-act="copyTxt" data-sid="${sid}">نسخ النص</button></div>
+    <p class="hint">${ph?'رقم ولي الأمر: <bdi dir="ltr">'+esc(st.phone)+'</bdi>':'لا يوجد رقم لولي الأمر.'} ${sentTxt(g,sid)}</p>
+    <details><summary>معاينة التقرير</summary><pre style="white-space:pre-wrap;font-family:inherit;font-size:13px;background:var(--soft);padding:10px;border-radius:10px">${esc(txt)}</pre></details></div>`;
+  h += `<div class="card"><h2>ملاحظات خاصة بك (لا تظهر لولي الأمر)</h2><textarea data-in="note" data-sid="${sid}" placeholder="ملاحظات سلوكية، تواصل مع ولي الأمر، خطة علاجية...">${esc(S.notes[sid]||'')}</textarea></div>`;
   return h;
 }
 
@@ -450,7 +457,8 @@ function vStudents(){
   header('طلاب الصف '+gradeOf(g).name, list.length+' طالباً');
   let h = `<div class="card"><div class="grid2"><div class="field" style="margin:0"><label>الشعبة</label><input type="text" data-in="section" value="${esc(S.grades[g].section)}"></div>
     <div class="field" style="margin:0"><label>إضافة طالب</label><div class="row"><input type="text" id="newName" placeholder="الاسم الرباعي"><button class="btn pri" data-act="addSt">+</button></div></div></div></div>`;
-  h += `<div class="list">${list.map((st,n)=>`<div class="st"><span class="n">${n+1}</span><input type="text" data-in="stName" data-sid="${st.id}" value="${esc(st.name)}" style="flex:1">
+  h += `<div class="list">${list.map((st,n)=>`<div class="st"><span class="n">${n+1}</span><input type="text" data-in="stName" data-sid="${st.id}" value="${esc(st.name)}" style="flex:1;min-width:0">
+    <input type="tel" inputmode="tel" dir="ltr" data-in="stPhone" data-sid="${st.id}" value="${esc(st.phone||'')}" placeholder="هاتف ولي الأمر" style="width:118px;flex:0 0 auto;font-size:13px">
     <button class="btn sm danger" data-act="delSt" data-sid="${st.id}" aria-label="حذف">✕</button></div>`).join('') || '<div class="st muted">لا يوجد طلاب.</div>'}</div>`;
   h += `<div class="card"><details><summary>لصق قائمة أسماء دفعة واحدة</summary>
     <p class="hint">اسم في كل سطر. تُضاف الأسماء إلى نهاية القائمة.</p><textarea id="bulk"></textarea>
@@ -475,6 +483,9 @@ function vSettings(){
     <div class="grid2">${['hw','tr','rs','cl','pp','co'].map(k=>`<div class="field"><label>${W_LABELS[k]}</label><input type="number" inputmode="decimal" min="0" step="0.5" data-in="w" data-k="${k}" value="${W[k]}"></div>`).join('')}</div>
     <p class="muted">المجموع: <b id="wsum">${['hw','tr','rs','cl','pp','co'].reduce((a,k)=>a+(+W[k]||0),0)}</b></p>
     <div class="grid3">${[0,1,2].map(k=>`<div class="field"><label>العظمى لقصير ${k+1}</label><input type="number" inputmode="decimal" min="1" data-in="qmax" data-k="${k}" value="${T.qmax[k]}"></div>`).join('')}</div></div>`;
+  h += `<div class="card"><h2>تقرير ولي الأمر</h2><label class="row" style="gap:10px"><input type="checkbox" data-in="showSide" ${T.showSide?'checked':''} style="width:22px;height:22px">
+    <span>إظهار العلامة الجانبية في التقرير</span></label>
+    <p class="hint">مغلق افتراضياً: العلامة قبل اكتمال الرصد تبدو منخفضة لأن المكوّن الفارغ يُحسب صفراً، وقد تُقلق ولي الأمر دون داعٍ. فعّله قرب نهاية الفصل.</p></div>`;
   h += `<div class="card"><h2>الأسابيع والأشهر</h2>
     <div class="field"><label>تاريخ أول يوم في الفصل (لاختيار الأسبوع الحالي تلقائياً)</label><input type="date" data-in="semStart" value="${esc(T.semStart)}"></div>
     <div class="field"><label>أسابيع المتابعة الأسبوعية (أسبوع في كل سطر)</label><textarea data-in="weeks" rows="6">${esc(T.weeks.join('\n'))}</textarea></div>
@@ -516,6 +527,12 @@ const ACT = {
   delSt(d){ const st=studs(view.g).find(x=>x.id===d.sid); if(!st||!confirm('حذف الطالب «'+st.name+'»؟')) return; S.grades[view.g].students=studs(view.g).filter(x=>x.id!==d.sid); save(); render(); },
   bulkAdd(){ const t=document.getElementById('bulk').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean); if(!t.length) return; t.forEach(n=>studs(view.g).push({id:uid(),name:n})); save(); render(); toast('أضيف '+t.length+' طالباً'); },
   sortSt(){ studs(view.g).sort((a,b)=>a.name.localeCompare(b.name,'ar')); save(); render(); },
+  reports(d){ go({name:'reports', g:d.g}); },
+  wa(d){ sendWa(d.g, d.sid); },
+  resetSent(){ if(!confirm('بدء جولة إرسال جديدة لهذا الصف؟ (تُمسح علامات «أُرسل» فقط)')) return; studs(view.g).forEach(st=>delete S.sent[view.g+'|'+st.id]); save(); render(); },
+  async shareImg(d){ const cv=reportCanvas(view.g,d.sid); const st=studs(view.g).find(x=>x.id===d.sid);
+    cv.toBlob(b=>deliver(b, `تقرير ${st.name}.png`, true), 'image/png'); },
+  async copyTxt(d){ try{ await navigator.clipboard.writeText(reportText(view.g,d.sid)); toast('نُسخ نص التقرير'); }catch(e){ toast('تعذّر النسخ'); } },
   backup(){ doBackup(); },
   restore(){ document.getElementById('fileIn').click(); },
   export(d){ exportGrade(d.g); },
@@ -544,6 +561,9 @@ document.addEventListener('change', e=>{
       if(card){ card.querySelector('[data-comp]').innerHTML=compHtml(o); card.querySelector('[data-tot]').innerHTML=(o.total===null?'—':o.total)+`<small class="muted">/${o.max}</small>`; }
       return; }
     case 'note': S.notes[d.sid]=el.value; break;
+    case 'pmsg': S.pmsg[d.sid]=el.value; save(); render(); toast('حُفظ'); return;
+    case 'stPhone': { const st=studs(view.g).find(x=>x.id===d.sid); if(st){ st.phone=el.value.trim(); if(st.phone && !waNum(st.phone)) toast('تحقق من الرقم: مثال 0791234567'); } break; }
+    case 'showSide': T.showSide = el.checked; break;
     case 'section': S.grades[view.g].section = el.value.trim()||'أ'; break;
     case 'stName': { const st=studs(view.g).find(x=>x.id===d.sid); if(st && el.value.trim()) st.name=el.value.trim(); break; }
     case 'set': T[d.k]=el.value; break;
@@ -576,12 +596,117 @@ document.getElementById('fileIn').addEventListener('change', async e=>{
   const f=e.target.files[0]; e.target.value=''; if(!f) return;
   try{
     const d=JSON.parse(await f.text());
+    if(d.app==='sijil-phones'){ importPhones(d); return; }
     if(d.app!=='sijil') throw new Error('bad');
     const has = GRADES.some(G=>studs(G.key).length) || Object.keys(S.rec).length;
     if(has && !confirm('سيستبدل الملف كل البيانات الحالية على هذا الجهاز. متابعة؟')) return;
     S=d; migrate(); save(); toast('تم الاسترجاع'); go({name:'home'});
   }catch(err){ alert('الملف غير صالح. اختر ملف نسخة احتياطية من «سجلي».'); }
 });
+
+/* ======================= تقارير أولياء الأمور ======================= */
+function waNum(p){
+  let d = String(p||'').replace(/[^\d]/g,'');
+  if(d.startsWith('00')) d = d.slice(2);
+  if(d.startsWith('962')) return d.length>=12 ? d : null;
+  if(d.startsWith('0')) d = d.slice(1);
+  return (d.length===9 && d.startsWith('7')) ? '962'+d : null;
+}
+function fmtDate(t){ const d=new Date(t); return d.getDate()+'/'+(d.getMonth()+1); }
+function sentTxt(g,sid){ const t=S.sent[g+'|'+sid]; return t ? `· أُرسل آخر تقرير في ${fmtDate(t)}` : ''; }
+function tier(p){ return p===null||p===undefined ? null : p>=.9?'ممتاز':p>=.75?'جيد جداً':p>=.6?'جيد':p>=.4?'يحتاج متابعة':'ضعيف'; }
+function reportBlocks(g,sid){
+  const G=gradeOf(g), T=S.settings, st=studs(g).find(x=>x.id===sid);
+  const d=new Date(); const today=`${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+  const B=[];
+  B.push({k:'greet', t:'السلام عليكم ورحمة الله وبركاته،'});
+  B.push({k:'h1', t:`تقرير متابعة الطالب: ${st.name}`});
+  B.push({k:'meta', t:`الصف ${G.name} / ${S.grades[g].section} — ${T.school} — حتى تاريخ ${today}`});
+  let any=false;
+  for(const s of G.subjects){
+    const R=rec(g,s); const L=[];
+    const h=hwStats(R,sid); const req=h.done+h.part+h.no;
+    if(req){
+      L.push(`الواجبات: أنجز ${h.done} من ${req}${h.part?` (و${h.part} جزئياً)`:''} — ${Math.round(h.pct*100)}%`);
+      const m=R.hw.m[sid]||{}; const miss=R.hw.items.map((it,i)=>m[i]===0?`و${i+1}${it.title?' ('+it.title+')':''}`:null).filter(Boolean);
+      if(miss.length) L.push(`لم يسلّم: ${miss.slice(-5).join('، ')}${miss.length>5?' وغيرها':''}`);
+    }
+    const per=trPer(R,sid,G.mode).map(x=> x===null?null : (G.mode==='weekly'? x : x/4));
+    const tp=TRACK.map((t,k)=> per[k]===null? null : `${t}: ${tier(per[k])}`).filter(Boolean);
+    if(tp.length) L.push(tp.join(' · '));
+    const rp=rsPct(R,sid); if(rp!==null) L.push(`المهام الأدائية: ${rsGrade(rp)}`);
+    const cp=clStats(R,sid).pct; if(cp!==null) L.push(`الملاحظة الصفية: ${tier(cp)}`);
+    if(T.showSide){ const o=side(g,s,sid); if(o.total!==null) L.push(`العلامة الجانبية حتى الآن: ${o.total} من ${o.max}`); }
+    if(L.length){ any=true; B.push({k:'subj', t:SUBJ[s].full, c:SUBJ[s].color}); L.forEach(t=>B.push({k:'li', t})); }
+  }
+  if(!any) B.push({k:'li', t:'لم تُرصد بيانات بعد.'});
+  if((S.pmsg[sid]||'').trim()) B.push({k:'note', t:'ملاحظة المعلم: '+S.pmsg[sid].trim()});
+  B.push({k:'sign', t:`مع الاحترام، المعلم ${T.teacher}`});
+  return B;
+}
+function reportText(g,sid){
+  return reportBlocks(g,sid).map(b=>({greet:b.t, h1:`*${b.t}*`, meta:b.t, subj:`\n*${b.t}*`, li:'• '+b.t, note:`\n*${b.t.split(':')[0]}:*${b.t.slice(b.t.indexOf(':')+1)}`, sign:'\n'+b.t}[b.k])).join('\n');
+}
+function waLink(n, txt){
+  const t=encodeURIComponent(txt);
+  return /Android/i.test(navigator.userAgent) ? `whatsapp://send?phone=${n}&text=${t}` : `https://wa.me/${n}?text=${t}`;
+}
+function sendWa(g,sid){
+  const st=studs(g).find(x=>x.id===sid); const n=waNum(st&&st.phone); if(!n){ toast('لا يوجد رقم صحيح لولي الأمر'); return; }
+  S.sent[g+'|'+sid]=Date.now(); save();
+  location.href = waLink(n, reportText(g,sid));
+  setTimeout(render, 600);
+}
+function reportCanvas(g,sid){
+  const B=reportBlocks(g,sid); const W=1080, M=60; const cv=document.createElement('canvas'); const x=cv.getContext('2d');
+  const F={greet:'32px',h1:'bold 44px',meta:'28px',subj:'bold 38px',li:'32px',note:'bold 32px',sign:'bold 30px'};
+  const LH={greet:48,h1:62,meta:44,subj:58,li:48,note:48,sign:48};
+  const font=k=>`${F[k]} system-ui, "Segoe UI", Tahoma, sans-serif`;
+  const wrap=(t,k)=>{ x.font=font(k); const out=[]; let line=''; for(const w of t.split(' ')){ const tt=line?line+' '+w:w; if(x.measureText(tt).width>W-2*M-30 && line){ out.push(line); line=w; } else line=tt; } out.push(line); return out; };
+  // قياس الارتفاع
+  let H=40+30; const lines=[];
+  for(const b of B){ const ls=wrap(b.t,b.k); const gap=(b.k==='subj'?24:b.k==='note'||b.k==='sign'?20:0); lines.push({b,ls,gap}); H+=gap+ls.length*LH[b.k]; }
+  H+=50; cv.width=W; cv.height=H;
+  x.fillStyle='#FFFFFF'; x.fillRect(0,0,W,H);
+  x.fillStyle='#1F4E5F'; x.fillRect(0,0,W,16);
+  x.direction='rtl'; x.textAlign='right'; x.textBaseline='top';
+  let y=40;
+  for(const {b,ls,gap} of lines){
+    y+=gap;
+    if(b.k==='subj'){ x.fillStyle=b.c+'1A'; x.fillRect(M-10,y-6,W-2*M+20,LH.subj*ls.length+2); x.fillStyle=b.c; x.fillRect(W-M+4,y-6,8,LH.subj*ls.length+2); }
+    x.font=font(b.k);
+    x.fillStyle = b.k==='subj'? b.c : b.k==='meta'? '#5E6E75' : b.k==='h1'? '#1F4E5F' : '#1B2A30';
+    ls.forEach((t,i)=>{ const pre=(b.k==='li'&&i===0)?'•  ':(b.k==='li'?'    ':''); x.fillText(pre+t, W-M-(b.k==='subj'?14:0), y+i*LH[b.k]); });
+    y+=ls.length*LH[b.k];
+    if(b.k==='meta'){ x.fillStyle='#D9E2E5'; x.fillRect(M,y+4,W-2*M,2); y+=14; }
+  }
+  return cv;
+}
+function importPhones(d){
+  const norm=t=>String(t||'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,'').trim();
+  let hit=0, total=0; const miss=[];
+  for(const G of GRADES){
+    const list=(d.grades||{})[G.key]||[]; const idx={}; studs(G.key).forEach(st=>idx[norm(st.name)]=st);
+    for(const [name,phone] of list){ total++; const st=idx[norm(name)]; if(st){ st.phone=phone; hit++; } else miss.push(name); }
+  }
+  save(); render();
+  alert(`تمت إضافة ${hit} رقماً من ${total}.` + (miss.length? `\nلم يُعثر على: ${miss.slice(0,8).join('، ')}${miss.length>8?' ...':''}\nيمكنك إضافة أرقامهم يدوياً من شاشة الطلاب.`:''));
+}
+function vReports(){
+  const {g}=view; const list=studs(g);
+  const sent=list.filter(st=>S.sent[g+'|'+st.id]).length; const noPh=list.filter(st=>!waNum(st.phone)).length;
+  header('تقارير أولياء الأمور', gradeLine(g));
+  let h=`<div class="card"><div class="legend">اضغط <b>إرسال</b>: يفتح واتساب على رقم ولي الأمر والتقرير مكتوب جاهزاً. اضغط إرسال في واتساب، ثم ارجع إلى التطبيق للطالب التالي.
+    يشمل التقرير كل مواد الصف، ولا تظهر فيه ملاحظاتك الخاصة.</div>
+    <div class="bar"><span class="grow"><b>${sent}</b> من ${list.length} أُرسل${noPh?` · <span style="color:var(--bad)">${noPh} بلا رقم</span>`:''}</span>
+    <button class="btn sm" data-act="resetSent">جولة جديدة</button></div></div>`;
+  h+=`<div class="list">${list.map((st,n)=>{ const t=S.sent[g+'|'+st.id]; const ok=waNum(st.phone);
+    return `<div class="st"><span class="n">${n+1}</span><button class="nm" data-act="prof" data-sid="${st.id}">${esc(st.name)}</button>
+      ${t?`<span class="badge hi">✓ ${fmtDate(t)}</span>`:''}
+      ${ok?`<button class="btn sm ${t?'':'pri'}" data-act="wa" data-g="${g}" data-sid="${st.id}">${t?'إعادة':'إرسال'}</button>`:`<button class="btn sm danger" data-act="students" data-g="${g}">بلا رقم</button>`}</div>`; }).join('')}</div>`;
+  h+=`<p class="hint">أرقام أولياء الأمور محفوظة على هذا الجهاز فقط، وتُعدَّل من شاشة «الطلاب».</p>`;
+  return h;
+}
 
 /* ======================= تصدير Excel ======================= */
 function exportGrade(g){
@@ -647,6 +772,8 @@ load();
 history.replaceState(view,'');
 render();
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  const hadCtrl = !!navigator.serviceWorker.controller; let reloaded=false;
+  navigator.serviceWorker.addEventListener('controllerchange', ()=>{ if(hadCtrl && !reloaded){ reloaded=true; toast('تم تحديث التطبيق'); setTimeout(()=>location.reload(), 900); } });
   navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 if(navigator.storage && navigator.storage.persist){ navigator.storage.persist().catch(()=>{}); }
