@@ -1,5 +1,5 @@
 // سجلي — يعمل بدون إنترنت: كل ملفات التطبيق تُخزَّن عند أول فتح
-const CACHE = 'sijil-v2';
+const CACHE = 'sijil-v3';
 const ASSETS = ['./', './index.html', './xlsx.full.min.js', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));

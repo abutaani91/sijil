@@ -126,7 +126,7 @@ table.pf th:first-child,table.pf td:first-child{text-align:right}
 'use strict';
 /* ======================= ثوابت ======================= */
 const KEY = 'sijil-data-v1';
-const APP_VERSION = 2;
+const APP_VERSION = 3;
 const SUBJ = {
   'علوم':  {full:'العلوم', color:'#2E7D32'},
   'فيزياء':{full:'الفيزياء', color:'#1565C0'},
@@ -145,6 +145,8 @@ const RS_CRIT = ['فهم المهمة والتخطيط لها','جمع البي�
 const CL_CRIT = ['يلتزم بتعليمات المهمة','يتعاون مع زملائه في المجموعة','يستخدم المصطلحات العلمية بدقة','يسجل ملاحظاته بتنظيم','يطرح أسئلة ذات صلة بالموضوع','يربط المفهوم بمثال من حياته','ينجز المهمة في الوقت المحدد','يعرض نتائجه بوضوح'];
 const DEF_WEEKS = ['23–27/8','30/8–3/9','6–10/9','13–17/9','20–24/9','27/9–1/10','4–8/10','11–15/10','18–22/10','25–29/10','1–5/11','8–12/11','15–19/11','22–26/11','29/11–3/12','6–10/12','13–14/12'];
 const DEF_MONTHS = ['آب – أيلول','تشرين الأول','تشرين الثاني','كانون الأول'];
+const DEF_PPW = {'g8|علوم':4,'g9|فيزياء':2,'g9|كيمياء':1,'g9|أحياء':1,'g9|أرض':1,'g10|فيزياء':2,'g10|كيمياء':2,'g10|أحياء':1,'g10|أرض':1};
+const AR_MONTHS = ['كانون الثاني','شباط','آذار','نيسان','أيار','حزيران','تموز','آب','أيلول','تشرين الأول','تشرين الثاني','كانون الأول'];
 const W_LABELS = {hw:'الواجبات',tr:'المتابعة والسلوك',rs:'التقويم الأدائي (سلم التقدير)',cl:'قائمة الرصد',pp:'القلم والورقة (اختبارات قصيرة)',co:'التواصل (مشاركة شفوية)'};
 const W_SHORT = {hw:'و',tr:'م',rs:'أ',cl:'ر',pp:'ق',co:'ت'};
 
@@ -153,7 +155,7 @@ function defaultState(){
   return {
     app:'sijil', v:APP_VERSION,
     settings:{school:'رجم الشامي الشرقي الثانوية للبنين', teacher:'محمد الطعاني', year:'2026 / 2027', sem:'الأول',
-      semStart:'2026-08-23', showSide:false, w:{hw:4,tr:3,rs:4,cl:2,pp:5,co:2}, qmax:[10,10,10], weeks:DEF_WEEKS.slice(), months:DEF_MONTHS.slice()},
+      semStart:'2026-08-23', showSide:false, w:{hw:4,tr:3,rs:4,cl:2,pp:5,co:2}, qmax:[10,10,10], weeks:DEF_WEEKS.slice(), months:DEF_MONTHS.slice(), ppw:Object.assign({},DEF_PPW)},
     grades:{g8:{section:'أ',students:[]}, g9:{section:'أ',students:[]}, g10:{section:'أ',students:[]}},
     rec:{}, notes:{}, pmsg:{}, sent:{}, lastBackup:null
   };
@@ -161,7 +163,7 @@ function defaultState(){
 function newRecord(){
   return {
     hw:{items:Array.from({length:15},()=>({date:'',title:''})), m:{}},
-    tr:{m:{}},
+    tr:{v2:true, m:{}, d:{}},
     rs:{tasks:[{title:'',crit:RS_CRIT.slice()},{title:'',crit:RS_CRIT.slice()}], m:{}},
     cl:{title:'',crit:CL_CRIT.slice(), m:{}},
     side:{q:{}, c:{}}
@@ -179,6 +181,17 @@ function migrate(){
   S.settings.w = Object.assign(d.settings.w, S.settings.w||{});
   S.grades = Object.assign(d.grades, S.grades||{});
   S.rec = S.rec||{}; S.notes = S.notes||{}; S.pmsg = S.pmsg||{}; S.sent = S.sent||{};
+  S.settings.ppw = Object.assign({}, DEF_PPW, S.settings.ppw||{});
+  // ترحيل سجل المتابعة القديم (أسبوعي/شهري) إلى الرصد بالحصة
+  for(const key in S.rec){
+    const Rc = S.rec[key]; if(!Rc.tr || Rc.tr.v2) continue;
+    const g = key.split('|')[0]; const old = Rc.tr.m||{}; const nm = {};
+    if(g==='g8'){
+      for(const sid in old){ nm[sid]={}; for(const w in old[sid]){ const a=old[sid][w]||[];
+        if(a.some(v=>v==='غ')) nm[sid][w+'-0']='غ'; else if(a.some(v=>v===1||v===0)) nm[sid][w+'-0']=a.map(v=>(v===1||v===0)?v:null); } }
+    } else if(Object.keys(old).length){ Rc.trLegacy = old; }
+    Rc.tr = {v2:true, m:nm, d:{}};
+  }
 }
 let saveErr = false;
 function save(){
@@ -193,25 +206,26 @@ const uid = () => 's'+Date.now().toString(36)+Math.random().toString(36).slice(2
 /* ======================= الحسابات (مطابقة لملف Excel) ======================= */
 const isNum = v => typeof v === 'number' && !isNaN(v);
 const r1 = x => Math.round(x*10)/10;
-function hwStats(R,sid){
+function hwInWeeks(R,i,weeks){ if(!weeks) return true; const d=(R.hw.items[i]||{}).date; return !!d && weeks.includes(weekOfDate(d)); }
+function hwStats(R,sid,weeks){
   const m = R.hw.m[sid]||{}; let done=0,part=0,no=0,abs=0;
-  for(const k in m){ const v=m[k]; if(v===1)done++; else if(v===2)part++; else if(v===0)no++; else if(v==='غ')abs++; }
+  for(const k in m){ if(!hwInWeeks(R,+k,weeks)) continue; const v=m[k]; if(v===1)done++; else if(v===2)part++; else if(v===0)no++; else if(v==='غ')abs++; }
   const den = done+part+no;
   return {done,part,no,abs,pct: den? (done+0.5*part)/den : null};
 }
-function trStats(R,sid){
-  const m = R.tr.m[sid]||{}; const per=[[0,0],[0,0],[0,0],[0,0]]; // [value-sum, count]
-  let sum=0,cnt=0;
-  for(const p in m){ (m[p]||[]).forEach((v,k)=>{ if(isNum(v)){ per[k][0]+=v; per[k][1]++; sum+=v; cnt++; } }); }
-  return {per, sum, cnt};
+function trStats(R,sid,weeks){
+  const m = R.tr.m[sid]||{}; const per=[[0,0],[0,0],[0,0],[0,0]]; let abs=0, sess=0, yes=0, cnt=0;
+  for(const key in m){
+    const w = +key.split('-')[0]; if(weeks && !weeks.includes(w)) continue;
+    const a = m[key];
+    if(a==='غ'){ abs++; sess++; continue; }
+    if(!Array.isArray(a)) continue; let any=false;
+    a.forEach((v,k)=>{ if(v===1||v===0){ per[k][1]++; cnt++; any=true; if(v===1){ per[k][0]++; yes++; } } });
+    if(any) sess++;
+  }
+  return {per, abs, sess, yes, cnt, pct: cnt? yes/cnt : null};
 }
-function trPct(R,sid,mode){
-  const t = trStats(R,sid); if(!t.cnt) return null;
-  return mode==='weekly' ? t.sum/t.cnt : t.sum/(4*t.cnt);   // أسبوعي: القيم 1/0 ، شهري: 1..4
-}
-function trPer(R,sid,mode){
-  return trStats(R,sid).per.map(([s,c])=> c ? (mode==='weekly'? s/c : s/c) : null); // أسبوعي نسبة، شهري متوسط من 4
-}
+function trPct(R,sid,weeks){ return trStats(R,sid,weeks).pct; }
 function rsTask(R,sid,t){
   const a = ((R.rs.m[sid]||{})[t])||[]; const vals = a.filter(isNum);
   return vals.length ? vals.reduce((x,y)=>x+y,0) : null;
@@ -227,8 +241,8 @@ function clStats(R,sid){
   return {yes, cnt:n.length, pct:n.length? yes/n.length : null};
 }
 function side(g,s,sid){
-  const R = rec(g,s), W = S.settings.w, mode = gradeOf(g).mode;
-  const p = {hw:hwStats(R,sid).pct, tr:trPct(R,sid,mode), rs:rsPct(R,sid), cl:clStats(R,sid).pct};
+  const R = rec(g,s), W = S.settings.w;
+  const p = {hw:hwStats(R,sid).pct, tr:trPct(R,sid), rs:rsPct(R,sid), cl:clStats(R,sid).pct};
   const out = {};
   for(const k of ['hw','tr','rs','cl']) out[k] = p[k]===null? null : r1(p[k]*W[k]);
   const q = R.side.q[sid]||[]; let qs=0, qm=0;
@@ -256,9 +270,33 @@ function weekIndexToday(){
   const st = new Date(S.settings.semStart+'T00:00:00'); const d = Math.floor((Date.now()-st.getTime())/86400000);
   const n = S.settings.weeks.length; if(isNaN(d)) return 0; return Math.max(0, Math.min(n-1, Math.floor(d/7)));
 }
-function monthIndexToday(){
-  const nw=S.settings.weeks.length, nm=S.settings.months.length;
-  return Math.max(0, Math.min(nm-1, Math.floor(weekIndexToday()/(nw/nm))));
+function ppw(g,s){ return Math.max(1, Math.min(8, +S.settings.ppw[g+'|'+s]||1)); }
+function weekStart(w){ const d=new Date(S.settings.semStart+'T00:00:00'); d.setDate(d.getDate()+7*w); return d; }
+function weekOfDate(iso){ const st=new Date(S.settings.semStart+'T00:00:00'), d=new Date(iso+'T00:00:00'); return Math.floor((d-st)/86400000/7); }
+function monthGroups(){
+  const n=S.settings.weeks.length; const G=[];
+  for(let w=0;w<n;w++){ const d=weekStart(w); d.setDate(d.getDate()+2); const k=d.getFullYear()*12+d.getMonth();
+    let g=G[G.length-1]; if(!g||g.k!==k){ g={k,label:AR_MONTHS[d.getMonth()],weeks:[]}; G.push(g); } g.weeks.push(w); }
+  if(G.length>1 && G[0].weeks.length===1){ G[1].weeks.unshift(...G[0].weeks); G[1].label=G[0].label+' – '+G[1].label; G.shift(); }
+  if(G.length>1 && G[G.length-1].weeks.length===1){ const l=G.pop(); G[G.length-1].weeks.push(...l.weeks); G[G.length-1].label+=' – '+l.label; }
+  return G;
+}
+function monthIndexToday(){ const w=weekIndexToday(); const G=monthGroups(); const i=G.findIndex(g=>g.weeks.includes(w)); return i<0?0:i; }
+let RP = null;   // فترة التقرير الحالية {type:'w'|'m'|'s', idx}
+function rp(){ if(!RP) RP={type:'w', idx:weekIndexToday()}; return RP; }
+function periodWeeks(P){ return P.type==='w'? [P.idx] : P.type==='m'? (monthGroups()[P.idx]||{weeks:[]}).weeks : null; }
+function periodKey(P){ return P.type==='s'? 's' : P.type+P.idx; }
+function periodLabel(P){
+  if(P.type==='w') return `الأسبوع ${P.idx+1} (${S.settings.weeks[P.idx]||''})`;
+  if(P.type==='m') return `شهر ${(monthGroups()[P.idx]||{}).label||''}`;
+  return `الفصل الدراسي ${S.settings.sem} حتى تاريخه`;
+}
+function periodPicker(){
+  const P=rp(); const G=monthGroups();
+  let h=`<div class="bar">${[['w','أسبوعي'],['m','شهري'],['s','الفصل كاملاً']].map(([t,l])=>`<button class="chip ${P.type===t?'on':''}" data-act="repType" data-t="${t}">${l}</button>`).join('')}</div>`;
+  if(P.type==='w') h+=`<div class="scroller">${S.settings.weeks.map((lab,k)=>`<button class="pchip ${k===P.idx?'on':''}" data-act="repIdx" data-v="${k}"><b>أ${k+1}</b><small dir="ltr">${esc(lab)}</small></button>`).join('')}</div>`;
+  if(P.type==='m') h+=`<div class="scroller">${G.map((g,k)=>`<button class="pchip ${k===P.idx?'on':''}" data-act="repIdx" data-v="${k}"><b>${esc(g.label)}</b><small>${g.weeks.length} أسابيع</small></button>`).join('')}</div>`;
+  return h;
 }
 
 /* ======================= التنقل ======================= */
@@ -338,26 +376,31 @@ function hwSummary(R,list,i){
   return cnts(a);
 }
 
-/* ---------- المتابعة ---------- */
+/* ---------- المتابعة (بالحصة) ---------- */
+function trKey(){ return view.p+'-'+view.k; }
 function tTr(g,s,list){
-  const R = rec(g,s); const mode = gradeOf(g).mode;
-  const periods = mode==='weekly' ? S.settings.weeks : S.settings.months;
-  if(view.p===undefined){ view.p = mode==='weekly'? weekIndexToday() : monthIndexToday(); history.replaceState(view,''); }
-  const p = Math.min(view.p, periods.length-1);
-  const filled = k => list.length && list.every(st=>{ const a=(R.tr.m[st.id]||{})[k]; return a && a.every(v=>v!==null&&v!==undefined); });
-  let h = `<div class="scroller">${periods.map((lab,k)=>`<button class="pchip ${k===p?'on':''} ${filled(k)?'done':''}" data-act="sel" data-k="p" data-v="${k}"><b>${mode==='weekly'?'أ'+(k+1):'ش'+(k+1)}</b><small dir="ltr">${esc(lab)}</small></button>`).join('')}</div>`;
-  h += `<div class="card" style="padding:10px 12px"><div class="row"><b class="grow">${mode==='weekly'?'الأسبوع '+(p+1):'الشهر '+(p+1)}: <bdi dir="ltr">${esc(periods[p])}</bdi></b></div>
-    <div class="bar"><button class="btn sm pri" data-act="trFill">${mode==='weekly'?'تعبئة الفارغ بـ ✓':'تعبئة الفارغ بـ 4'}</button><button class="btn sm" data-act="trClear">مسح ${mode==='weekly'?'الأسبوع':'الشهر'}</button></div>
-    <div class="legend">${mode==='weekly'
-      ? 'كل ضغطة تغيّر الخانة: فارغ ← <b>✓</b> ملتزم ← <b>✗</b> غير ملتزم ← <b>غ</b> غائب ← فارغ'
-      : 'كل ضغطة تغيّر التقدير: فارغ ← <b>4</b> دائماً ← <b>3</b> غالباً ← <b>2</b> أحياناً ← <b>1</b> نادراً ← فارغ'}
+  const R = rec(g,s); const nW = S.settings.weeks.length; const np = ppw(g,s);
+  if(view.p===undefined) view.p = weekIndexToday();
+  const w = Math.min(view.p, nW-1);
+  const full = key => list.length && list.every(st=>{ const a=(R.tr.m[st.id]||{})[key]; return a==='غ' || (Array.isArray(a) && a.every(v=>v===1||v===0)); });
+  if(view.k===undefined || view.kw!==w){ let k=np-1; for(let i=0;i<np;i++){ if(!full(w+'-'+i)){ k=i; break; } } view.k=k; view.kw=w; history.replaceState(view,''); }
+  const k = Math.min(view.k, np-1); const key = w+'-'+k;
+  const wdone = x => { for(let i=0;i<np;i++) if(!full(x+'-'+i)) return false; return true; };
+  let h = `<div class="scroller">${S.settings.weeks.map((lab,x)=>`<button class="pchip ${x===w?'on':''} ${wdone(x)?'done':''}" data-act="selW" data-v="${x}"><b>أ${x+1}</b><small dir="ltr">${esc(lab)}</small></button>`).join('')}</div>`;
+  h += `<div class="bar">${Array.from({length:np},(_,i)=>{ const dt=R.tr.d[w+'-'+i]; return `<button class="chip ${i===k?'on':''}" data-act="sel" data-k="k" data-v="${i}">الحصة ${i+1}${full(w+'-'+i)?' ✓':''}${dt?` <small dir="ltr">${dt.slice(5).split('-').reverse().join('/')}</small>`:''}</button>`; }).join('')}</div>`;
+  const abs = list.filter(st=>(R.tr.m[st.id]||{})[key]==='غ').length;
+  h += `<div class="card" style="padding:10px 12px">
+    <div class="row"><b class="grow">الأسبوع ${w+1} · الحصة ${k+1} من ${np}</b><span class="muted">غياب: ${abs}</span></div>
+    <div class="field"><label>تاريخ الحصة (يُكتب تلقائياً عند أول رصد)</label><input type="date" data-in="trDate" value="${esc(R.tr.d[key]||'')}"></div>
+    <div class="bar"><button class="btn sm pri" data-act="trFill">تعبئة الفارغ بـ ✓ للحاضرين</button><button class="btn sm" data-act="trClear">مسح الحصة</button></div>
+    <div class="legend"><b>غ</b> غائب (تُلغى بقية الخانات) · كل ضغطة على الخانة: فارغ ← <b>✓</b> ← <b>✗</b> ← فارغ
       <br><b>ك</b> الكتاب · <b>د</b> الدفتر · <b>أ</b> الأدوات · <b>س</b> السلوك</div></div>`;
   h += `<div class="list">${list.map((st,n)=>{
-    const a = (R.tr.m[st.id]||{})[p] || [null,null,null,null];
-    const cells = a.map((v,k)=> mode==='weekly'
-      ? `<button class="c ${CLS(v)}" data-act="tr" data-sid="${st.id}" data-c="${k}"><span class="lb">${TRACK_S[k]}</span>${SYM(v)}</button>`
-      : `<button class="c ${RCLS(v)}" data-act="tr" data-sid="${st.id}" data-c="${k}"><span class="lb">${TRACK_S[k]}</span>${isNum(v)?v:''}</button>`).join('');
-    return `<div class="st"><span class="n">${n+1}</span><button class="nm" data-act="prof" data-sid="${st.id}">${esc(st.name)}</button><span class="cells">${cells}</span>${badge(trPct(R,st.id,mode))}</div>`;
+    const a = (R.tr.m[st.id]||{})[key]; const isAbs = a==='غ'; const arr = Array.isArray(a)? a : [null,null,null,null];
+    const cells = `<button class="c sm ${isAbs?'abs':''}" style="${isAbs?'':'opacity:.55'}" data-act="trAbs" data-sid="${st.id}">غ</button>` +
+      (isAbs ? TRACK_S.map(t=>`<button class="c sm" disabled style="opacity:.3"><span class="lb">${t}</span>—</button>`).join('')
+             : arr.map((v,c)=>`<button class="c sm ${CLS(v)}" data-act="tr" data-sid="${st.id}" data-c="${c}"><span class="lb">${TRACK_S[c]}</span>${SYM(v)}</button>`).join(''));
+    return `<div class="st"><span class="n">${n+1}</span><button class="nm" data-act="prof" data-sid="${st.id}">${esc(st.name)}</button><span class="cells">${cells}</span></div>`;
   }).join('')}</div>`;
   return h;
 }
@@ -430,19 +473,20 @@ function vStudent(){
   let h = `<div class="card"><h2>ملخص الأداء</h2><table class="pf"><tr><th>المبحث</th><th>واجبات</th><th>متابعة</th><th>أداء</th><th>رصد</th><th>جانبي</th></tr>`;
   for(const s of G.subjects){
     const R = rec(g,s); const o = side(g,s,sid);
-    h += `<tr><td><b style="color:${SUBJ[s].color}">${SUBJ[s].full}</b></td><td>${pctTxt(hwStats(R,sid).pct)}</td><td>${pctTxt(trPct(R,sid,G.mode))}</td><td>${pctTxt(rsPct(R,sid))}</td><td>${pctTxt(clStats(R,sid).pct)}</td><td><b>${o.total===null?'—':o.total}</b>/${o.max}</td></tr>`;
+    h += `<tr><td><b style="color:${SUBJ[s].color}">${SUBJ[s].full}</b></td><td>${pctTxt(hwStats(R,sid).pct)}</td><td>${pctTxt(trPct(R,sid))}</td><td>${pctTxt(rsPct(R,sid))}</td><td>${pctTxt(clStats(R,sid).pct)}</td><td><b>${o.total===null?'—':o.total}</b>/${o.max}</td></tr>`;
   }
   h += `</table></div>`;
   for(const s of G.subjects){
-    const R = rec(g,s); const hs = hwStats(R,sid); const per = trPer(R,sid,G.mode);
+    const R = rec(g,s); const hs = hwStats(R,sid); const ts = trStats(R,sid);
     h += `<div class="card"><h2 style="color:${SUBJ[s].color}">${SUBJ[s].full}</h2>
       <div class="kv"><span>الواجبات</span><span>${cnts([hs.done,hs.part,hs.no,hs.abs])}</span></div>
-      ${TRACK.map((t,k)=>`<div class="kv"><span>${t}</span><span>${per[k]===null?'—':G.mode==='weekly'?pctTxt(per[k]):per[k].toFixed(1)+' من 4'}</span></div>`).join('')}
+      <div class="kv"><span>الحضور</span><span>${ts.sess? `غاب ${ts.abs} من ${ts.sess} حصة` : '—'}</span></div>
+      ${TRACK.map((t,k)=>`<div class="kv"><span>${t}</span><span>${ts.per[k][1]? `${ts.per[k][0]} من ${ts.per[k][1]} (${pctTxt(ts.per[k][0]/ts.per[k][1])})` : '—'}</span></div>`).join('')}
       <div class="kv"><span>سلم التقدير</span><span>${[0,1].map(t=>{const x=rsTask(R,sid,t);return x===null?'—':x+'/20';}).join(' · ')} ${rsGrade(rsPct(R,sid))}</span></div></div>`;
   }
   const ph = waNum(st.phone); const txt = reportText(g,sid);
-  h += `<div class="card"><h2>تقرير ولي الأمر</h2>
-    <div class="field"><label>رسالة لولي الأمر (تظهر في آخر التقرير — اختياري)</label><textarea data-in="pmsg" data-sid="${sid}" style="min-height:60px" placeholder="مثال: نرجو متابعة حل الواجبات في البيت">${esc(S.pmsg[sid]||'')}</textarea></div>
+  h += `<div class="card"><h2>تقرير ولي الأمر</h2>${periodPicker()}
+    <div class="field"><label>رسالة لولي الأمر (تظهر في آخر التقرير — اختياري)</label><textarea data-in="pmsg" data-sid="${sid}" style="min-height:60px" placeholder="مثال: نرجو متابعة حل الواجبات في البيت — تبقى الرسالة حتى تمسحها">${esc(S.pmsg[sid]||'')}</textarea></div>
     <div class="bar">${ph?`<button class="btn pri" data-act="wa" data-g="${g}" data-sid="${sid}">إرسال على واتساب</button>`:`<button class="btn" data-act="students" data-g="${g}">أضف رقم ولي الأمر</button>`}
       <button class="btn" data-act="shareImg" data-sid="${sid}">مشاركة كصورة</button><button class="btn" data-act="copyTxt" data-sid="${sid}">نسخ النص</button></div>
     <p class="hint">${ph?'رقم ولي الأمر: <bdi dir="ltr">'+esc(st.phone)+'</bdi>':'لا يوجد رقم لولي الأمر.'} ${sentTxt(g,sid)}</p>
@@ -486,11 +530,12 @@ function vSettings(){
   h += `<div class="card"><h2>تقرير ولي الأمر</h2><label class="row" style="gap:10px"><input type="checkbox" data-in="showSide" ${T.showSide?'checked':''} style="width:22px;height:22px">
     <span>إظهار العلامة الجانبية في التقرير</span></label>
     <p class="hint">مغلق افتراضياً: العلامة قبل اكتمال الرصد تبدو منخفضة لأن المكوّن الفارغ يُحسب صفراً، وقد تُقلق ولي الأمر دون داعٍ. فعّله قرب نهاية الفصل.</p></div>`;
-  h += `<div class="card"><h2>الأسابيع والأشهر</h2>
+  h += `<div class="card"><h2>الأسابيع</h2>
     <div class="field"><label>تاريخ أول يوم في الفصل (لاختيار الأسبوع الحالي تلقائياً)</label><input type="date" data-in="semStart" value="${esc(T.semStart)}"></div>
-    <div class="field"><label>أسابيع المتابعة الأسبوعية (أسبوع في كل سطر)</label><textarea data-in="weeks" rows="6">${esc(T.weeks.join('\n'))}</textarea></div>
-    <div class="field"><label>أشهر المتابعة الشهرية (شهر في كل سطر)</label><textarea data-in="months" rows="4">${esc(T.months.join('\n'))}</textarea></div>
-    <p class="hint">للفصل الثاني: احفظ نسخة احتياطية أولاً، ثم عدّل الأسابيع والأشهر، ثم امسح السجلات من الزر أدناه.</p></div>`;
+    <div class="field"><label>أسابيع الفصل (أسبوع في كل سطر)</label><textarea data-in="weeks" rows="6">${esc(T.weeks.join('\n'))}</textarea></div>
+    <p class="hint">الأشهر تُحسب تلقائياً من تواريخ الأسابيع. للفصل الثاني: احفظ نسخة احتياطية أولاً، ثم عدّل تاريخ البداية والأسابيع، ثم امسح السجلات من الزر أدناه.</p></div>`;
+  h += `<div class="card"><h2>عدد الحصص الأسبوعية</h2><p class="hint">يحدد عدد خانات الحصص في سجل المتابعة لكل أسبوع.</p>
+    ${GRADES.map(G=>`<div class="muted" style="margin-top:8px"><b>الصف ${G.name}</b></div><div class="grid2">${G.subjects.map(s=>`<div class="field"><label>${SUBJ[s].full}</label><input type="number" inputmode="numeric" min="1" max="8" data-in="ppw" data-k="${G.key}|${s}" value="${ppw(G.key,s)}"></div>`).join('')}</div>`).join('')}</div>`;
   h += `<div class="card"><h2>بدء فصل جديد</h2><p class="muted">يمسح كل الرصد والعلامات ويُبقي الطلاب والإعدادات.</p>
     <button class="btn danger" data-act="wipeRec">مسح كل السجلات</button></div>`;
   h += `<p class="hint" style="text-align:center">سجلي — الإصدار ${APP_VERSION}</p>`;
@@ -511,15 +556,22 @@ const ACT = {
   open(d){ go({name:'rec', g:d.g, s:d.s, tab:'hw'}); },
   students(d){ go({name:'students', g:d.g}); },
   prof(d){ go({name:'student', g:view.g, sid:d.sid}); },
-  tab(d){ view = Object.assign({}, view, {tab:d.t}); delete view.i; delete view.p; go(view, true); window.scrollTo(0,0); },
+  tab(d){ view = Object.assign({}, view, {tab:d.t}); delete view.i; delete view.p; delete view.k; delete view.kw; go(view, true); window.scrollTo(0,0); },
+  selW(d){ view = Object.assign({}, view, {p:+d.v}); delete view.k; go(view, true); },
+  repType(d){ const P=rp(); P.type=d.t; P.idx = d.t==='w'? weekIndexToday() : d.t==='m'? monthIndexToday() : 0; keep(()=>{}); },
+  repIdx(d){ rp().idx=+d.v; keep(()=>{}); },
   sel(d){ view = Object.assign({}, view, {[d.k]:+d.v}); go(view, true); },
-  hw(d){ keep(()=>{ const R=rec(view.g,view.s); const m=R.hw.m[d.sid]||(R.hw.m[d.sid]={}); const v=parseV(d.v); if(m[view.i]===v) delete m[view.i]; else m[view.i]=v; }); },
-  hwFill(){ keep(()=>{ const R=rec(view.g,view.s); studs(view.g).forEach(st=>{ const m=R.hw.m[st.id]||(R.hw.m[st.id]={}); if(m[view.i]===undefined) m[view.i]=1; }); }); },
+  hw(d){ keep(()=>{ const R=rec(view.g,view.s); if(!R.hw.items[view.i].date) R.hw.items[view.i].date=stamp(); const m=R.hw.m[d.sid]||(R.hw.m[d.sid]={}); const v=parseV(d.v); if(m[view.i]===v) delete m[view.i]; else m[view.i]=v; }); },
+  hwFill(){ keep(()=>{ const R=rec(view.g,view.s); if(!R.hw.items[view.i].date) R.hw.items[view.i].date=stamp(); studs(view.g).forEach(st=>{ const m=R.hw.m[st.id]||(R.hw.m[st.id]={}); if(m[view.i]===undefined) m[view.i]=1; }); }); },
   hwClear(){ if(!confirm('مسح رصد هذا الواجب لكل الطلاب؟')) return; keep(()=>{ const R=rec(view.g,view.s); for(const k in R.hw.m) delete R.hw.m[k][view.i]; }); },
   hwAdd(){ const R=rec(view.g,view.s); R.hw.items.push({date:'',title:''}); save(); view=Object.assign({},view,{i:R.hw.items.length-1}); go(view,true); },
-  tr(d){ keep(()=>{ const R=rec(view.g,view.s); const mode=gradeOf(view.g).mode; const m=R.tr.m[d.sid]||(R.tr.m[d.sid]={}); const a=m[view.p]||(m[view.p]=[null,null,null,null]); a[+d.c]=cycle(a[+d.c]??null, mode==='weekly'?SEQ_CODE:SEQ_RATE); }); },
-  trFill(){ keep(()=>{ const R=rec(view.g,view.s); const full=gradeOf(view.g).mode==='weekly'?1:4; studs(view.g).forEach(st=>{ const m=R.tr.m[st.id]||(R.tr.m[st.id]={}); const a=m[view.p]||(m[view.p]=[null,null,null,null]); for(let k=0;k<4;k++) if(a[k]===null||a[k]===undefined) a[k]=full; }); }); },
-  trClear(){ if(!confirm('مسح رصد هذه الفترة لكل الطلاب؟')) return; keep(()=>{ const R=rec(view.g,view.s); for(const k in R.tr.m) delete R.tr.m[k][view.p]; }); },
+  tr(d){ keep(()=>{ const R=rec(view.g,view.s); const key=trKey(); if(!R.tr.d[key]) R.tr.d[key]=stamp(); const m=R.tr.m[d.sid]||(R.tr.m[d.sid]={});
+    if(m[key]==='غ') return; const a=Array.isArray(m[key])? m[key] : (m[key]=[null,null,null,null]); a[+d.c]=cycle(a[+d.c]??null,[null,1,0]); }); },
+  trAbs(d){ keep(()=>{ const R=rec(view.g,view.s); const key=trKey(); if(!R.tr.d[key]) R.tr.d[key]=stamp(); const m=R.tr.m[d.sid]||(R.tr.m[d.sid]={});
+    if(m[key]==='غ') delete m[key]; else m[key]='غ'; }); },
+  trFill(){ keep(()=>{ const R=rec(view.g,view.s); const key=trKey(); if(!R.tr.d[key]) R.tr.d[key]=stamp();
+    studs(view.g).forEach(st=>{ const m=R.tr.m[st.id]||(R.tr.m[st.id]={}); if(m[key]==='غ') return; const a=Array.isArray(m[key])? m[key] : (m[key]=[null,null,null,null]); for(let c=0;c<4;c++) if(a[c]!==1&&a[c]!==0) a[c]=1; }); }); },
+  trClear(){ if(!confirm('مسح رصد هذه الحصة لكل الطلاب؟')) return; keep(()=>{ const R=rec(view.g,view.s); const key=trKey(); for(const sid in R.tr.m) delete R.tr.m[sid][key]; delete R.tr.d[key]; }); },
   rs(d){ keep(()=>{ const R=rec(view.g,view.s); const t=view.t||0; const m=R.rs.m[d.sid]||(R.rs.m[d.sid]={}); const a=m[t]||(m[t]=[]); a[+d.c]=cycle(a[+d.c]??null, SEQ_RATE); }); },
   cl(d){ keep(()=>{ const R=rec(view.g,view.s); const a=R.cl.m[d.sid]||(R.cl.m[d.sid]=[]); a[+d.c]=cycle(a[+d.c]??null, SEQ_CODE); }); },
   clFill(){ keep(()=>{ const R=rec(view.g,view.s); studs(view.g).forEach(st=>{ const a=R.cl.m[st.id]||(R.cl.m[st.id]=[]); for(let k=0;k<R.cl.crit.length;k++) if(a[k]===null||a[k]===undefined) a[k]=1; }); }); },
@@ -529,7 +581,6 @@ const ACT = {
   sortSt(){ studs(view.g).sort((a,b)=>a.name.localeCompare(b.name,'ar')); save(); render(); },
   reports(d){ go({name:'reports', g:d.g}); },
   wa(d){ sendWa(d.g, d.sid); },
-  resetSent(){ if(!confirm('بدء جولة إرسال جديدة لهذا الصف؟ (تُمسح علامات «أُرسل» فقط)')) return; studs(view.g).forEach(st=>delete S.sent[view.g+'|'+st.id]); save(); render(); },
   async shareImg(d){ const cv=reportCanvas(view.g,d.sid); const st=studs(view.g).find(x=>x.id===d.sid);
     cv.toBlob(b=>deliver(b, `تقرير ${st.name}.png`, true), 'image/png'); },
   async copyTxt(d){ try{ await navigator.clipboard.writeText(reportText(view.g,d.sid)); toast('نُسخ نص التقرير'); }catch(e){ toast('تعذّر النسخ'); } },
@@ -571,7 +622,8 @@ document.addEventListener('change', e=>{
     case 'qmax': T.qmax[+d.k] = Math.max(1, num() ?? 10); break;
     case 'semStart': T.semStart = el.value; break;
     case 'weeks': { const a=el.value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean); if(a.length) T.weeks=a; break; }
-    case 'months': { const a=el.value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean); if(a.length) T.months=a; break; }
+    case 'ppw': T.ppw[d.k] = Math.max(1, Math.min(8, Math.round(num() ?? 1))); el.value=T.ppw[d.k]; break;
+    case 'trDate': { const R=rec(view.g,view.s); if(el.value) R.tr.d[trKey()]=el.value; else delete R.tr.d[trKey()]; save(); render(); return; }
   }
   save(); toast('حُفظ');
 });
@@ -613,33 +665,38 @@ function waNum(p){
   return (d.length===9 && d.startsWith('7')) ? '962'+d : null;
 }
 function fmtDate(t){ const d=new Date(t); return d.getDate()+'/'+(d.getMonth()+1); }
-function sentTxt(g,sid){ const t=S.sent[g+'|'+sid]; return t ? `· أُرسل آخر تقرير في ${fmtDate(t)}` : ''; }
+function sentKey(g,sid){ return g+'|'+sid+'|'+periodKey(rp()); }
+function sentTxt(g,sid){ const t=S.sent[sentKey(g,sid)]; return t ? `· أُرسل تقرير هذه الفترة في ${fmtDate(t)}` : ''; }
+function hissa(n){ return n===1?'حصة واحدة':n===2?'حصتين':(n>=3&&n<=10)?n+' حصص':n+' حصة'; }
 function tier(p){ return p===null||p===undefined ? null : p>=.9?'ممتاز':p>=.75?'جيد جداً':p>=.6?'جيد':p>=.4?'يحتاج متابعة':'ضعيف'; }
 function reportBlocks(g,sid){
-  const G=gradeOf(g), T=S.settings, st=studs(g).find(x=>x.id===sid);
-  const d=new Date(); const today=`${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+  const G=gradeOf(g), T=S.settings, st=studs(g).find(x=>x.id===sid), P=rp(), weeks=periodWeeks(P);
+  const kind = P.type==='w'?'الأسبوعي':P.type==='m'?'الشهري':'الفصلي';
   const B=[];
   B.push({k:'greet', t:'السلام عليكم ورحمة الله وبركاته،'});
-  B.push({k:'h1', t:`تقرير متابعة الطالب: ${st.name}`});
-  B.push({k:'meta', t:`الصف ${G.name} / ${S.grades[g].section} — ${T.school} — حتى تاريخ ${today}`});
+  B.push({k:'h1', t:`التقرير ${kind} للطالب: ${st.name}`});
+  B.push({k:'meta', t:`الصف ${G.name} / ${S.grades[g].section} — ${T.school} — ${periodLabel(P)}`});
   let any=false;
   for(const s of G.subjects){
     const R=rec(g,s); const L=[];
-    const h=hwStats(R,sid); const req=h.done+h.part+h.no;
+    const ts=trStats(R,sid,weeks);
+    if(ts.sess) L.push(ts.abs ? `الحضور: غاب ${ts.abs} من ${hissa(ts.sess)}` : `الحضور: حضر ${ts.sess>1?'جميع الحصص ('+hissa(ts.sess)+')':'الحصة'}`);
+    const tp=TRACK.map((t,k)=>{ const [y,c]=ts.per[k]; if(!c) return null; return P.type==='s' ? `${t}: ${tier(y/c)}` : `${t} ${y} من ${c}`; }).filter(Boolean);
+    if(tp.length) L.push((P.type==='s'?'':'الالتزام بالحصص: ')+tp.join(' · '));
+    const h=hwStats(R,sid,weeks); const req=h.done+h.part+h.no;
     if(req){
-      L.push(`الواجبات: أنجز ${h.done} من ${req}${h.part?` (و${h.part} جزئياً)`:''} — ${Math.round(h.pct*100)}%`);
-      const m=R.hw.m[sid]||{}; const miss=R.hw.items.map((it,i)=>m[i]===0?`و${i+1}${it.title?' ('+it.title+')':''}`:null).filter(Boolean);
+      L.push(`الواجبات: أنجز ${h.done} من ${req}${h.part?` (و${h.part} جزئياً)`:''}${P.type==='s'?` — ${Math.round(h.pct*100)}%`:''}`);
+      const m=R.hw.m[sid]||{}; const miss=R.hw.items.map((it,i)=>(m[i]===0 && hwInWeeks(R,i,weeks))?`و${i+1}${it.title?' ('+it.title+')':''}`:null).filter(Boolean);
       if(miss.length) L.push(`لم يسلّم: ${miss.slice(-5).join('، ')}${miss.length>5?' وغيرها':''}`);
     }
-    const per=trPer(R,sid,G.mode).map(x=> x===null?null : (G.mode==='weekly'? x : x/4));
-    const tp=TRACK.map((t,k)=> per[k]===null? null : `${t}: ${tier(per[k])}`).filter(Boolean);
-    if(tp.length) L.push(tp.join(' · '));
-    const rp=rsPct(R,sid); if(rp!==null) L.push(`المهام الأدائية: ${rsGrade(rp)}`);
-    const cp=clStats(R,sid).pct; if(cp!==null) L.push(`الملاحظة الصفية: ${tier(cp)}`);
-    if(T.showSide){ const o=side(g,s,sid); if(o.total!==null) L.push(`العلامة الجانبية حتى الآن: ${o.total} من ${o.max}`); }
+    if(P.type==='s'){
+      const rp_=rsPct(R,sid); if(rp_!==null) L.push(`المهام الأدائية: ${rsGrade(rp_)}`);
+      const cp=clStats(R,sid).pct; if(cp!==null) L.push(`الملاحظة الصفية: ${tier(cp)}`);
+      if(T.showSide){ const o=side(g,s,sid); if(o.total!==null) L.push(`العلامة الجانبية حتى الآن: ${o.total} من ${o.max}`); }
+    }
     if(L.length){ any=true; B.push({k:'subj', t:SUBJ[s].full, c:SUBJ[s].color}); L.forEach(t=>B.push({k:'li', t})); }
   }
-  if(!any) B.push({k:'li', t:'لم تُرصد بيانات بعد.'});
+  if(!any) B.push({k:'li', t:'لا توجد بيانات مرصودة في هذه الفترة.'});
   if((S.pmsg[sid]||'').trim()) B.push({k:'note', t:'ملاحظة المعلم: '+S.pmsg[sid].trim()});
   B.push({k:'sign', t:`مع الاحترام، المعلم ${T.teacher}`});
   return B;
@@ -653,7 +710,7 @@ function waLink(n, txt){
 }
 function sendWa(g,sid){
   const st=studs(g).find(x=>x.id===sid); const n=waNum(st&&st.phone); if(!n){ toast('لا يوجد رقم صحيح لولي الأمر'); return; }
-  S.sent[g+'|'+sid]=Date.now(); save();
+  S.sent[sentKey(g,sid)]=Date.now(); save();
   location.href = waLink(n, reportText(g,sid));
   setTimeout(render, 600);
 }
@@ -694,13 +751,13 @@ function importPhones(d){
 }
 function vReports(){
   const {g}=view; const list=studs(g);
-  const sent=list.filter(st=>S.sent[g+'|'+st.id]).length; const noPh=list.filter(st=>!waNum(st.phone)).length;
+  const sent=list.filter(st=>S.sent[sentKey(g,st.id)]).length; const noPh=list.filter(st=>!waNum(st.phone)).length;
   header('تقارير أولياء الأمور', gradeLine(g));
-  let h=`<div class="card"><div class="legend">اضغط <b>إرسال</b>: يفتح واتساب على رقم ولي الأمر والتقرير مكتوب جاهزاً. اضغط إرسال في واتساب، ثم ارجع إلى التطبيق للطالب التالي.
+  let h=`<div class="card">${periodPicker()}<div class="legend" style="margin-top:6px">الفترة: <b>${esc(periodLabel(rp()))}</b><br>اضغط <b>إرسال</b>: يفتح واتساب على رقم ولي الأمر والتقرير مكتوب جاهزاً. اضغط إرسال في واتساب، ثم ارجع إلى التطبيق للطالب التالي.
     يشمل التقرير كل مواد الصف، ولا تظهر فيه ملاحظاتك الخاصة.</div>
     <div class="bar"><span class="grow"><b>${sent}</b> من ${list.length} أُرسل${noPh?` · <span style="color:var(--bad)">${noPh} بلا رقم</span>`:''}</span>
-    <button class="btn sm" data-act="resetSent">جولة جديدة</button></div></div>`;
-  h+=`<div class="list">${list.map((st,n)=>{ const t=S.sent[g+'|'+st.id]; const ok=waNum(st.phone);
+    </div></div>`;
+  h+=`<div class="list">${list.map((st,n)=>{ const t=S.sent[sentKey(g,st.id)]; const ok=waNum(st.phone);
     return `<div class="st"><span class="n">${n+1}</span><button class="nm" data-act="prof" data-sid="${st.id}">${esc(st.name)}</button>
       ${t?`<span class="badge hi">✓ ${fmtDate(t)}</span>`:''}
       ${ok?`<button class="btn sm ${t?'':'pri'}" data-act="wa" data-g="${g}" data-sid="${st.id}">${t?'إعادة':'إرسال'}</button>`:`<button class="btn sm danger" data-act="students" data-g="${g}">بلا رقم</button>`}</div>`; }).join('')}</div>`;
@@ -733,14 +790,13 @@ function exportGrade(g){
       list.map((st,k)=>{ const m=R.hw.m[st.id]||{}; const h=hwStats(R,st.id); return [k+1, st.name, ...R.hw.items.map((_,i)=>SYM(m[i])), h.done,h.part,h.no,h.abs,P(h.pct)]; }),
       [4,28,...Array(n).fill(5),7,7,7,7,10]);
     // المتابعة
-    const per = G.mode==='weekly'? T.weeks : T.months; const pre = G.mode==='weekly'?'أ':'ش';
-    add(`${s} - متابعة`, `سجل المتابعة ${G.mode==='weekly'?'الأسبوعية':'الشهرية'}: الكتاب والدفتر والأدوات والسلوك — ${SUBJ[s].full}`, s,
-      ['م','اسم الطالب', ...per.flatMap((_,p)=>TRACK_S.map(c=>`${pre}${p+1} ${c}`)), ...TRACK.map(t=>t+(G.mode==='weekly'?' %':' (من 4)')), 'النسبة الكلية'],
-      ['','', ...per.flatMap(l=>[l,'','','']), '','','','',''],
-      list.map((st,k)=>{ const m=R.tr.m[st.id]||{}; const pr=trPer(R,st.id,G.mode);
-        return [k+1, st.name, ...per.flatMap((_,p)=>(m[p]||[null,null,null,null]).map(v=> G.mode==='weekly'? SYM(v) : V(v))),
-          ...pr.map(x=> G.mode==='weekly'? P(x) : (x===null?'':Math.round(x*10)/10)), P(trPct(R,st.id,G.mode))]; }),
-      [4,28,...Array(per.length*4).fill(4),9,9,9,9,10]);
+    const nW = T.weeks.length;
+    add(`${s} - متابعة`, `سجل المتابعة بالحصة: الحضور والكتاب والدفتر والأدوات والسلوك — ${SUBJ[s].full}`, s,
+      ['م','اسم الطالب','الحصص المرصودة','الغياب', ...TRACK.map(t=>t+' %'), 'النسبة الكلية', ...T.weeks.map((_,w)=>'أ'+(w+1))],
+      ['','','','', '','','','', '', ...T.weeks],
+      list.map((st,k)=>{ const t=trStats(R,st.id); return [k+1, st.name, t.sess, t.abs, ...t.per.map(([y,c])=>P(c?y/c:null)), P(t.pct),
+        ...T.weeks.map((_,w)=>{ const x=trStats(R,st.id,[w]); return x.pct!==null? P(x.pct) : (x.abs? 'غ' : ''); })]; }),
+      [4,28,9,7,9,9,9,9,10,...Array(nW).fill(6)]);
     // سلم التقدير
     add(`${s} - سلم تقدير`, `سلم التقدير العددي للمهام الأدائية — ${SUBJ[s].full}`, s,
       ['م','اسم الطالب', ...R.rs.tasks.flatMap((t,i)=>[...t.crit.map((_,k)=>`م${i+1}: ${k+1}`), `مجموع المهمة ${i+1} (20)`]), 'النسبة','التقدير'],
