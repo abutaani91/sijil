@@ -72,6 +72,10 @@ header.top .sub{font-size:12px;opacity:.85;white-space:nowrap;overflow:hidden;te
 .c.bad{background:var(--bad-bg);color:var(--bad);border-color:transparent}
 .c.part{background:var(--part-bg);color:var(--part);border-color:transparent}
 .c.abs{background:var(--abs-bg);color:var(--abs);border-color:transparent;font-size:15px}
+.c.v0{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.c.v1{background:var(--part-bg);color:var(--part);border-color:transparent}
+.c.v2{background:#F6DFC0;color:#8A4B00;border-color:transparent}
+.c.v3{background:var(--bad-bg);color:var(--bad);border-color:transparent}
 .c.r4{background:var(--ok-bg);color:var(--ok);border-color:transparent}
 .c.r3{background:#E6F2D9;color:#4E7D1E;border-color:transparent}
 .c.r2{background:var(--part-bg);color:var(--part);border-color:transparent}
@@ -80,6 +84,7 @@ header.top .sub{font-size:12px;opacity:.85;white-space:nowrap;overflow:hidden;te
 .seg .c:not(.sel){background:var(--card);border-color:var(--line);opacity:.45}
 .seg .c.sel{box-shadow:0 0 0 2px currentColor inset}
 .cnt{display:inline-block;margin-inline-end:6px;white-space:nowrap}
+.tagx{font-size:12px;background:var(--soft);color:var(--muted);border-radius:8px;padding:3px 8px}
 .badge{flex:0 0 auto;min-width:44px;text-align:center;font-size:12px;font-weight:700;border-radius:8px;padding:4px 6px;background:var(--soft);color:var(--muted)}
 .badge.hi{background:var(--ok-bg);color:var(--ok)}
 .badge.mid{background:var(--part-bg);color:var(--part)}
@@ -126,7 +131,7 @@ table.pf th:first-child,table.pf td:first-child{text-align:right}
 'use strict';
 /* ======================= ثوابت ======================= */
 const KEY = 'sijil-data-v1';
-const APP_VERSION = 3;
+const APP_VERSION = 4;
 const SUBJ = {
   'علوم':  {full:'العلوم', color:'#2E7D32'},
   'فيزياء':{full:'الفيزياء', color:'#1565C0'},
@@ -139,15 +144,15 @@ const GRADES = [
   {key:'g9', name:'التاسع', mode:'monthly', subjects:['فيزياء','كيمياء','أحياء','أرض']},
   {key:'g10',name:'العاشر', mode:'monthly', subjects:['فيزياء','كيمياء','أحياء','أرض']}
 ];
-const TRACK = ['الكتاب','الدفتر','الأدوات','السلوك'];
-const TRACK_S = ['ك','د','أ','س'];
+const TRACK = ['الكتاب','الدفتر','الأدوات'];   // المؤشرات الثلاثة (الخانة الرابعة = عدّاد المخالفات)
+const TRACK_S = ['ك','د','أ'];
 const RS_CRIT = ['فهم المهمة والتخطيط لها','جمع البيانات أو المعلومات وتنظيمها','التحليل والتفسير العلمي','دقة المفاهيم والمصطلحات','العرض والتواصل'];
 const CL_CRIT = ['يلتزم بتعليمات المهمة','يتعاون مع زملائه في المجموعة','يستخدم المصطلحات العلمية بدقة','يسجل ملاحظاته بتنظيم','يطرح أسئلة ذات صلة بالموضوع','يربط المفهوم بمثال من حياته','ينجز المهمة في الوقت المحدد','يعرض نتائجه بوضوح'];
 const DEF_WEEKS = ['23–27/8','30/8–3/9','6–10/9','13–17/9','20–24/9','27/9–1/10','4–8/10','11–15/10','18–22/10','25–29/10','1–5/11','8–12/11','15–19/11','22–26/11','29/11–3/12','6–10/12','13–14/12'];
 const DEF_MONTHS = ['آب – أيلول','تشرين الأول','تشرين الثاني','كانون الأول'];
 const DEF_PPW = {'g8|علوم':4,'g9|فيزياء':2,'g9|كيمياء':1,'g9|أحياء':1,'g9|أرض':1,'g10|فيزياء':2,'g10|كيمياء':2,'g10|أحياء':1,'g10|أرض':1};
 const AR_MONTHS = ['كانون الثاني','شباط','آذار','نيسان','أيار','حزيران','تموز','آب','أيلول','تشرين الأول','تشرين الثاني','كانون الأول'];
-const W_LABELS = {hw:'الواجبات',tr:'المتابعة والسلوك',rs:'التقويم الأدائي (سلم التقدير)',cl:'قائمة الرصد',pp:'القلم والورقة (اختبارات قصيرة)',co:'التواصل (مشاركة شفوية)'};
+const W_LABELS = {hw:'الواجبات',tr:'المتابعة (الكتاب والدفتر والأدوات)',rs:'التقويم الأدائي (سلم التقدير)',cl:'قائمة الرصد',pp:'القلم والورقة (اختبارات قصيرة)',co:'التواصل (مشاركة شفوية)'};
 const W_SHORT = {hw:'و',tr:'م',rs:'أ',cl:'ر',pp:'ق',co:'ت'};
 
 /* ======================= الحالة ======================= */
@@ -163,7 +168,7 @@ function defaultState(){
 function newRecord(){
   return {
     hw:{items:Array.from({length:15},()=>({date:'',title:''})), m:{}},
-    tr:{v2:true, m:{}, d:{}},
+    tr:{v2:true, v3:true, m:{}, d:{}},
     rs:{tasks:[{title:'',crit:RS_CRIT.slice()},{title:'',crit:RS_CRIT.slice()}], m:{}},
     cl:{title:'',crit:CL_CRIT.slice(), m:{}},
     side:{q:{}, c:{}}
@@ -192,6 +197,12 @@ function migrate(){
     } else if(Object.keys(old).length){ Rc.trLegacy = old; }
     Rc.tr = {v2:true, m:nm, d:{}};
   }
+  for(const key in S.rec){
+    const Rc = S.rec[key]; if(!Rc.tr || Rc.tr.v3) continue;
+    for(const sid in Rc.tr.m){ const m=Rc.tr.m[sid];
+      for(const k in m){ const a=m[k]; if(Array.isArray(a)) a[3] = a[3]===1 ? 0 : a[3]===0 ? 1 : null; } }
+    Rc.tr.v3 = true;
+  }
 }
 let saveErr = false;
 function save(){
@@ -214,16 +225,23 @@ function hwStats(R,sid,weeks){
   return {done,part,no,abs,pct: den? (done+0.5*part)/den : null};
 }
 function trStats(R,sid,weeks){
-  const m = R.tr.m[sid]||{}; const per=[[0,0],[0,0],[0,0],[0,0]]; let abs=0, sess=0, yes=0, cnt=0;
+  const m = R.tr.m[sid]||{}; const per=[[0,0],[0,0],[0,0]]; let abs=0, sess=0, yes=0, cnt=0, viol=0, vSess=0;
   for(const key in m){
     const w = +key.split('-')[0]; if(weeks && !weeks.includes(w)) continue;
     const a = m[key];
     if(a==='غ'){ abs++; sess++; continue; }
     if(!Array.isArray(a)) continue; let any=false;
-    a.forEach((v,k)=>{ if(v===1||v===0){ per[k][1]++; cnt++; any=true; if(v===1){ per[k][0]++; yes++; } } });
+    for(let k=0;k<3;k++){ const v=a[k]; if(v===1||v===0){ per[k][1]++; cnt++; any=true; if(v===1){ per[k][0]++; yes++; } } }
+    if(isNum(a[3]) && a[3]>=0){ viol += a[3]; vSess++; any=true; }
     if(any) sess++;
   }
-  return {per, abs, sess, yes, cnt, pct: cnt? yes/cnt : null};
+  return {per, abs, sess, yes, cnt, viol, vSess, pct: cnt? yes/cnt : null};
+}
+function violList(R,sid,weeks){
+  const m = R.tr.m[sid]||{}; const out=[];
+  for(const key in m){ const [w,k]=key.split('-').map(Number); if(weeks && !weeks.includes(w)) continue;
+    const a=m[key]; if(Array.isArray(a) && isNum(a[3]) && a[3]>0) out.push({w,k,n:a[3]}); }
+  return out.sort((x,y)=> x.w-y.w || x.k-y.k);
 }
 function trPct(R,sid,weeks){ return trStats(R,sid,weeks).pct; }
 function rsTask(R,sid,t){
@@ -263,6 +281,7 @@ function badge(p, txt){ return `<span class="badge ${badgeCls(p)}">${txt ?? pctT
 const SYM = v => v===1?'✓':v===0?'✗':v===2?'○':v==='غ'?'غ':'';
 const CLS = v => v===1?'ok':v===0?'bad':v===2?'part':v==='غ'?'abs':'';
 const RCLS = v => isNum(v)? 'r'+v : '';
+const vCls = v => !isNum(v)? '' : v===0? 'v0' : v===1? 'v1' : v===2? 'v2' : 'v3';
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'),2200); }
 function header(title, sub){ document.getElementById('hTitle').textContent=title; document.getElementById('hSub').textContent=sub||''; document.getElementById('backBtn').style.visibility = view.name==='home'?'hidden':'visible'; }
 function gradeLine(g){ const G=gradeOf(g); return `الصف ${G.name} / ${S.grades[g].section}`; }
@@ -351,11 +370,45 @@ function vRec(){
 /* ---------- الواجبات ---------- */
 function tHw(g,s,list){
   const R = rec(g,s); const items = R.hw.items;
+  const mode = view.hm || 'one';
   if(view.i===undefined){ let last=0; items.forEach((it,i)=>{ if(it.date||it.title||list.some(st=>(R.hw.m[st.id]||{})[i]!==undefined)) last=i; }); view.i=last; history.replaceState(view,''); }
   const i = Math.min(view.i, items.length-1);
-  const it = items[i];
   const filled = k => list.length && list.every(st=>(R.hw.m[st.id]||{})[k]!==undefined);
-  let h = `<div class="scroller">${items.map((x,k)=>`<button class="pchip ${k===i?'on':''} ${filled(k)?'done':''}" data-act="sel" data-k="i" data-v="${k}"><b>و${k+1}</b><small>${esc(x.date? x.date.slice(5).split('-').reverse().join('/') : '—')}</small></button>`).join('')}
+  let h = `<div class="bar">${[['one','واجب واحد'],['grid','عدة واجبات'],['st','طالب واحد']].map(([m,l])=>`<button class="chip ${mode===m?'on':''}" data-act="hwMode" data-m="${m}">${l}</button>`).join('')}</div>`;
+  const label = k => `و${k+1}${items[k].title? ' — '+items[k].title : ''}`;
+
+  if(mode==='grid'){
+    if(!Array.isArray(view.sel) || !view.sel.length){ view.sel=[i]; history.replaceState(view,''); }
+    const sel = view.sel.filter(k=>k<items.length).sort((a,b)=>a-b);
+    h += `<p class="hint">اختر حتى 4 واجبات تفتشها الآن، فتظهر خاناتها كلها في صف الطالب.</p>
+      <div class="scroller">${items.map((x,k)=>`<button class="pchip ${sel.includes(k)?'on':''} ${filled(k)?'done':''}" data-act="hwPick" data-v="${k}"><b>و${k+1}</b><small>${esc(x.title||(x.date? x.date.slice(5).split('-').reverse().join('/') : '—'))}</small></button>`).join('')}</div>`;
+    h += `<div class="card" style="padding:10px 12px"><div class="row" style="flex-wrap:wrap">${sel.map(k=>`<span class="tagx">${esc(label(k))}</span>`).join('')}</div>
+      <div class="bar"><button class="btn sm pri" data-act="hwFillSel">تعبئة الفارغ بـ ✓</button>
+      <span class="muted grow" style="text-align:left">رُصد ${sel.reduce((a,k)=>a+list.filter(st=>(R.hw.m[st.id]||{})[k]!==undefined).length,0)} من ${sel.length*list.length}</span></div>
+      <div class="legend">كل ضغطة على الخانة: فارغ ← <b>✓</b> أنجز ← <b>○</b> جزئي ← <b>✗</b> لم ينجز ← <b>غ</b> غائب ← فارغ</div></div>`;
+    h += `<div class="list"><div class="st" style="background:var(--soft);min-height:38px"><span class="n"></span><b class="grow" style="font-size:13px">الطالب</b>
+      <span class="cells">${sel.map(k=>`<span class="c sm" style="background:transparent;border-color:transparent;font-size:12px;font-weight:600">و${k+1}</span>`).join('')}</span></div>
+      ${list.map((st,n)=>`<div class="st"><span class="n">${n+1}</span><button class="nm" data-act="prof" data-sid="${st.id}">${esc(st.name)}</button>
+        <span class="cells">${sel.map(k=>{ const v=(R.hw.m[st.id]||{})[k]; return `<button class="c sm ${CLS(v)}" data-act="hwCyc" data-sid="${st.id}" data-k="${k}">${SYM(v)}</button>`; }).join('')}</span>${badge(hwStats(R,st.id).pct)}</div>`).join('')}</div>`;
+    return h;
+  }
+
+  if(mode==='st'){
+    if(view.sid2===undefined || !list.some(x=>x.id===view.sid2)){ view.sid2 = list[0].id; history.replaceState(view,''); }
+    const st = list.find(x=>x.id===view.sid2); const m = R.hw.m[st.id]||{}; const hs = hwStats(R,st.id);
+    h += `<div class="card" style="padding:10px 12px"><div class="field" style="margin:0"><label>الطالب</label>
+      <select data-in="hwStudent">${list.map(x=>`<option value="${x.id}" ${x.id===st.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select></div>
+      <div class="bar"><span class="muted grow">${cnts([hs.done,hs.part,hs.no,hs.abs])} · ${pctTxt(hs.pct)}</span>
+      <button class="btn sm" data-act="prof" data-sid="${st.id}">ملف الطالب</button></div>
+      <div class="legend">كل واجبات الطالب في صفحة واحدة — مناسب لمحاسبة المتأخر في التسليم.</div></div>`;
+    h += `<div class="list">${items.map((it,k)=>`<div class="st"><span class="n">و${k+1}</span>
+      <span class="nm" style="cursor:default">${esc(it.title||'—')}${it.date?`<br><small class="muted" dir="ltr">${it.date.slice(5).split('-').reverse().join('/')}</small>`:''}</span>
+      <span class="cells seg">${[1,2,0,'غ'].map(c=>`<button class="c sm ${CLS(c)} ${m[k]===c?'sel':''}" data-act="hwSet" data-sid="${st.id}" data-k="${k}" data-v="${c}">${SYM(c)}</button>`).join('')}</span></div>`).join('')}</div>`;
+    return h;
+  }
+
+  const it = items[i];
+  h += `<div class="scroller">${items.map((x,k)=>`<button class="pchip ${k===i?'on':''} ${filled(k)?'done':''}" data-act="sel" data-k="i" data-v="${k}"><b>و${k+1}</b><small>${esc(x.date? x.date.slice(5).split('-').reverse().join('/') : '—')}</small></button>`).join('')}
     <button class="pchip" data-act="hwAdd"><b>+</b><small>واجب</small></button></div>`;
   h += `<div class="card" style="padding:10px 12px"><div class="grid2">
     <div class="field" style="margin:0"><label>تاريخ الواجب ${i+1}</label><input type="date" data-in="hwDate" value="${esc(it.date)}"></div>
@@ -393,14 +446,16 @@ function tTr(g,s,list){
     <div class="row"><b class="grow">الأسبوع ${w+1} · الحصة ${k+1} من ${np}</b><span class="muted">غياب: ${abs}</span></div>
     <div class="field"><label>تاريخ الحصة (يُكتب تلقائياً عند أول رصد)</label><input type="date" data-in="trDate" value="${esc(R.tr.d[key]||'')}"></div>
     <div class="bar"><button class="btn sm pri" data-act="trFill">تعبئة الفارغ بـ ✓ للحاضرين</button><button class="btn sm" data-act="trClear">مسح الحصة</button></div>
-    <div class="legend"><b>غ</b> غائب (تُلغى بقية الخانات) · كل ضغطة على الخانة: فارغ ← <b>✓</b> ← <b>✗</b> ← فارغ
-      <br><b>ك</b> الكتاب · <b>د</b> الدفتر · <b>أ</b> الأدوات · <b>س</b> السلوك</div></div>`;
+    <div class="legend"><b>غ</b> غائب (تُلغى بقية الخانات) · <b>ك</b> الكتاب · <b>د</b> الدفتر · <b>أ</b> الأدوات: كل ضغطة فارغ ← <b>✓</b> ← <b>✗</b> ← فارغ
+      <br><b>خانة المخالفات</b>: كل ضغطة تزيد مخالفة (0 ← 1 ← 2 …) · اضغط مطولاً لتصفيرها · المخالفات تُعدّ فقط ولا تُخصم من العلامة</div></div>`;
   h += `<div class="list">${list.map((st,n)=>{
     const a = (R.tr.m[st.id]||{})[key]; const isAbs = a==='غ'; const arr = Array.isArray(a)? a : [null,null,null,null];
+    const vt = trStats(R,st.id).viol;
     const cells = `<button class="c sm ${isAbs?'abs':''}" style="${isAbs?'':'opacity:.55'}" data-act="trAbs" data-sid="${st.id}">غ</button>` +
-      (isAbs ? TRACK_S.map(t=>`<button class="c sm" disabled style="opacity:.3"><span class="lb">${t}</span>—</button>`).join('')
-             : arr.map((v,c)=>`<button class="c sm ${CLS(v)}" data-act="tr" data-sid="${st.id}" data-c="${c}"><span class="lb">${TRACK_S[c]}</span>${SYM(v)}</button>`).join(''));
-    return `<div class="st"><span class="n">${n+1}</span><button class="nm" data-act="prof" data-sid="${st.id}">${esc(st.name)}</button><span class="cells">${cells}</span></div>`;
+      (isAbs ? TRACK_S.map(t=>`<button class="c sm" disabled style="opacity:.3"><span class="lb">${t}</span>—</button>`).join('') + `<button class="c sm" disabled style="opacity:.3">—</button>`
+             : arr.slice(0,3).map((v,c)=>`<button class="c sm ${CLS(v)}" data-act="tr" data-sid="${st.id}" data-c="${c}"><span class="lb">${TRACK_S[c]}</span>${SYM(v)}</button>`).join('')
+               + `<button class="c sm vio ${vCls(arr[3])}" data-act="trVio" data-sid="${st.id}"><span class="lb">مخ</span>${isNum(arr[3])? arr[3] : ''}</button>`);
+    return `<div class="st"><span class="n">${n+1}</span><button class="nm" data-act="prof" data-sid="${st.id}">${esc(st.name)}</button><span class="cells">${cells}</span>${vt?`<span class="badge lo">${vt}</span>`:''}</div>`;
   }).join('')}</div>`;
   return h;
 }
@@ -482,6 +537,8 @@ function vStudent(){
       <div class="kv"><span>الواجبات</span><span>${cnts([hs.done,hs.part,hs.no,hs.abs])}</span></div>
       <div class="kv"><span>الحضور</span><span>${ts.sess? `غاب ${ts.abs} من ${ts.sess} حصة` : '—'}</span></div>
       ${TRACK.map((t,k)=>`<div class="kv"><span>${t}</span><span>${ts.per[k][1]? `${ts.per[k][0]} من ${ts.per[k][1]} (${pctTxt(ts.per[k][0]/ts.per[k][1])})` : '—'}</span></div>`).join('')}
+      <div class="kv"><span>المخالفات الصفية</span><span>${ts.vSess? `${ts.viol} في ${ts.vSess} حصة` : '—'}</span></div>
+      ${violList(R,sid).length? `<div class="kv"><span class="muted">تفصيلها</span><span class="muted" style="font-size:12px">${violList(R,sid).map(x=>`أ${x.w+1}/ح${x.k+1}: ${x.n}`).join(' · ')}</span></div>` : ''}
       <div class="kv"><span>سلم التقدير</span><span>${[0,1].map(t=>{const x=rsTask(R,sid,t);return x===null?'—':x+'/20';}).join(' · ')} ${rsGrade(rsPct(R,sid))}</span></div></div>`;
   }
   const ph = waNum(st.phone); const txt = reportText(g,sid);
@@ -556,7 +613,7 @@ const ACT = {
   open(d){ go({name:'rec', g:d.g, s:d.s, tab:'hw'}); },
   students(d){ go({name:'students', g:d.g}); },
   prof(d){ go({name:'student', g:view.g, sid:d.sid}); },
-  tab(d){ view = Object.assign({}, view, {tab:d.t}); delete view.i; delete view.p; delete view.k; delete view.kw; go(view, true); window.scrollTo(0,0); },
+  tab(d){ view = Object.assign({}, view, {tab:d.t}); delete view.i; delete view.p; delete view.k; delete view.kw; delete view.sel; go(view, true); window.scrollTo(0,0); },
   selW(d){ view = Object.assign({}, view, {p:+d.v}); delete view.k; go(view, true); },
   repType(d){ const P=rp(); P.type=d.t; P.idx = d.t==='w'? weekIndexToday() : d.t==='m'? monthIndexToday() : 0; keep(()=>{}); },
   repIdx(d){ rp().idx=+d.v; keep(()=>{}); },
@@ -565,12 +622,28 @@ const ACT = {
   hwFill(){ keep(()=>{ const R=rec(view.g,view.s); if(!R.hw.items[view.i].date) R.hw.items[view.i].date=stamp(); studs(view.g).forEach(st=>{ const m=R.hw.m[st.id]||(R.hw.m[st.id]={}); if(m[view.i]===undefined) m[view.i]=1; }); }); },
   hwClear(){ if(!confirm('مسح رصد هذا الواجب لكل الطلاب؟')) return; keep(()=>{ const R=rec(view.g,view.s); for(const k in R.hw.m) delete R.hw.m[k][view.i]; }); },
   hwAdd(){ const R=rec(view.g,view.s); R.hw.items.push({date:'',title:''}); save(); view=Object.assign({},view,{i:R.hw.items.length-1}); go(view,true); },
+  hwMode(d){ view=Object.assign({},view,{hm:d.m}); go(view,true); window.scrollTo(0,0); },
+  hwPick(d){ const k=+d.v; const sel=(view.sel||[]).slice(); const j=sel.indexOf(k);
+    if(j>=0){ if(sel.length>1) sel.splice(j,1); } else { sel.push(k); if(sel.length>4) sel.shift(); }
+    view=Object.assign({},view,{sel:sel.sort((a,b)=>a-b)}); const y=window.scrollY; go(view,true); window.scrollTo(0,y); },
+  hwCyc(d){ keep(()=>{ const R=rec(view.g,view.s); const k=+d.k; if(!R.hw.items[k].date) R.hw.items[k].date=stamp();
+    const m=R.hw.m[d.sid]||(R.hw.m[d.sid]={}); const seq=[undefined,1,2,0,'غ']; const nx=seq[(seq.indexOf(m[k])+1)%seq.length];
+    if(nx===undefined) delete m[k]; else m[k]=nx; }); },
+  hwSet(d){ keep(()=>{ const R=rec(view.g,view.s); const k=+d.k; if(!R.hw.items[k].date) R.hw.items[k].date=stamp();
+    const m=R.hw.m[d.sid]||(R.hw.m[d.sid]={}); const v=parseV(d.v); if(m[k]===v) delete m[k]; else m[k]=v; }); },
+  hwFillSel(){ keep(()=>{ const R=rec(view.g,view.s); (view.sel||[]).forEach(k=>{ if(!R.hw.items[k].date) R.hw.items[k].date=stamp();
+    studs(view.g).forEach(st=>{ const m=R.hw.m[st.id]||(R.hw.m[st.id]={}); if(m[k]===undefined) m[k]=1; }); }); }); },
   tr(d){ keep(()=>{ const R=rec(view.g,view.s); const key=trKey(); if(!R.tr.d[key]) R.tr.d[key]=stamp(); const m=R.tr.m[d.sid]||(R.tr.m[d.sid]={});
     if(m[key]==='غ') return; const a=Array.isArray(m[key])? m[key] : (m[key]=[null,null,null,null]); a[+d.c]=cycle(a[+d.c]??null,[null,1,0]); }); },
   trAbs(d){ keep(()=>{ const R=rec(view.g,view.s); const key=trKey(); if(!R.tr.d[key]) R.tr.d[key]=stamp(); const m=R.tr.m[d.sid]||(R.tr.m[d.sid]={});
     if(m[key]==='غ') delete m[key]; else m[key]='غ'; }); },
+  trVio(d, el){ keep(()=>{ const R=rec(view.g,view.s); const key=trKey(); if(!R.tr.d[key]) R.tr.d[key]=stamp();
+    const m=R.tr.m[d.sid]||(R.tr.m[d.sid]={}); if(m[key]==='غ') return;
+    const a=Array.isArray(m[key])? m[key] : (m[key]=[null,null,null,null]);
+    a[3] = el && el.dataset.hold==='1' ? null : (isNum(a[3])? a[3]+1 : 1); }); },
   trFill(){ keep(()=>{ const R=rec(view.g,view.s); const key=trKey(); if(!R.tr.d[key]) R.tr.d[key]=stamp();
-    studs(view.g).forEach(st=>{ const m=R.tr.m[st.id]||(R.tr.m[st.id]={}); if(m[key]==='غ') return; const a=Array.isArray(m[key])? m[key] : (m[key]=[null,null,null,null]); for(let c=0;c<4;c++) if(a[c]!==1&&a[c]!==0) a[c]=1; }); }); },
+    studs(view.g).forEach(st=>{ const m=R.tr.m[st.id]||(R.tr.m[st.id]={}); if(m[key]==='غ') return; const a=Array.isArray(m[key])? m[key] : (m[key]=[null,null,null,null]);
+      for(let c=0;c<3;c++) if(a[c]!==1&&a[c]!==0) a[c]=1; if(!isNum(a[3])) a[3]=0; }); }); },
   trClear(){ if(!confirm('مسح رصد هذه الحصة لكل الطلاب؟')) return; keep(()=>{ const R=rec(view.g,view.s); const key=trKey(); for(const sid in R.tr.m) delete R.tr.m[sid][key]; delete R.tr.d[key]; }); },
   rs(d){ keep(()=>{ const R=rec(view.g,view.s); const t=view.t||0; const m=R.rs.m[d.sid]||(R.rs.m[d.sid]={}); const a=m[t]||(m[t]=[]); a[+d.c]=cycle(a[+d.c]??null, SEQ_RATE); }); },
   cl(d){ keep(()=>{ const R=rec(view.g,view.s); const a=R.cl.m[d.sid]||(R.cl.m[d.sid]=[]); a[+d.c]=cycle(a[+d.c]??null, SEQ_CODE); }); },
@@ -589,7 +662,12 @@ const ACT = {
   export(d){ exportGrade(d.g); },
   wipeRec(){ if(!confirm('سيُمسح كل الرصد والعلامات في كل الصفوف. هل حفظت نسخة احتياطية؟')) return; if(!confirm('تأكيد نهائي: مسح كل السجلات؟')) return; S.rec={}; save(); toast('تم مسح السجلات'); go({name:'home'}); }
 };
-document.addEventListener('click', e=>{ const b=e.target.closest('[data-act]'); if(!b) return; const f=ACT[b.dataset.act]; if(f) f(b.dataset, b); });
+document.addEventListener('click', e=>{ const b=e.target.closest('[data-act]'); if(!b) return; const f=ACT[b.dataset.act]; if(f) f(b.dataset, b); if(b.dataset) delete b.dataset.hold; });
+// ضغط مطوّل على خانة المخالفات = تصفيرها
+let holdT=null;
+document.addEventListener('pointerdown', e=>{ const b=e.target.closest('[data-act=trVio]'); if(!b) return;
+  holdT=setTimeout(()=>{ b.dataset.hold='1'; ACT.trVio(b.dataset, b); holdT=null; }, 550); });
+for(const ev of ['pointerup','pointercancel','pointerleave']) document.addEventListener(ev, ()=>{ if(holdT){ clearTimeout(holdT); holdT=null; } });
 document.addEventListener('keydown', e=>{ if(e.key==='Enter' && e.target.id==='newName') ACT.addSt(); });
 
 /* حقول الإدخال: تُحفظ دون إعادة رسم الشاشة حتى لا يضيع التركيز */
@@ -599,6 +677,7 @@ document.addEventListener('change', e=>{
   switch(d.in){
     case 'hwDate': rec(view.g,view.s).hw.items[view.i].date = el.value; save(); render(); return;
     case 'hwTitle': rec(view.g,view.s).hw.items[view.i].title = el.value; break;
+    case 'hwStudent': view=Object.assign({},view,{sid2:el.value}); go(view,true); return;
     case 'rsTitle': rec(view.g,view.s).rs.tasks[view.t||0].title = el.value; break;
     case 'rsCrit': rec(view.g,view.s).rs.tasks[view.t||0].crit[+d.c] = el.value; save(); render(); return;
     case 'clTitle': rec(view.g,view.s).cl.title = el.value; break;
@@ -683,6 +762,7 @@ function reportBlocks(g,sid){
     if(ts.sess) L.push(ts.abs ? `الحضور: غاب ${ts.abs} من ${hissa(ts.sess)}` : `الحضور: حضر ${ts.sess>1?'جميع الحصص ('+hissa(ts.sess)+')':'الحصة'}`);
     const tp=TRACK.map((t,k)=>{ const [y,c]=ts.per[k]; if(!c) return null; return P.type==='s' ? `${t}: ${tier(y/c)}` : `${t} ${y} من ${c}`; }).filter(Boolean);
     if(tp.length) L.push((P.type==='s'?'':'الالتزام بالحصص: ')+tp.join(' · '));
+    if(ts.vSess) L.push(ts.viol ? `المخالفات الصفية: ${ts.viol===1?'مخالفة واحدة':ts.viol===2?'مخالفتان':ts.viol+' مخالفات'} في ${hissa(ts.vSess)}` : 'السلوك: لا مخالفات');
     const h=hwStats(R,sid,weeks); const req=h.done+h.part+h.no;
     if(req){
       L.push(`الواجبات: أنجز ${h.done} من ${req}${h.part?` (و${h.part} جزئياً)`:''}${P.type==='s'?` — ${Math.round(h.pct*100)}%`:''}`);
@@ -792,11 +872,11 @@ function exportGrade(g){
     // المتابعة
     const nW = T.weeks.length;
     add(`${s} - متابعة`, `سجل المتابعة بالحصة: الحضور والكتاب والدفتر والأدوات والسلوك — ${SUBJ[s].full}`, s,
-      ['م','اسم الطالب','الحصص المرصودة','الغياب', ...TRACK.map(t=>t+' %'), 'النسبة الكلية', ...T.weeks.map((_,w)=>'أ'+(w+1))],
-      ['','','','', '','','','', '', ...T.weeks],
-      list.map((st,k)=>{ const t=trStats(R,st.id); return [k+1, st.name, t.sess, t.abs, ...t.per.map(([y,c])=>P(c?y/c:null)), P(t.pct),
-        ...T.weeks.map((_,w)=>{ const x=trStats(R,st.id,[w]); return x.pct!==null? P(x.pct) : (x.abs? 'غ' : ''); })]; }),
-      [4,28,9,7,9,9,9,9,10,...Array(nW).fill(6)]);
+      ['م','اسم الطالب','الحصص المرصودة','الغياب', ...TRACK.map(t=>t+' %'), 'النسبة الكلية','عدد المخالفات', ...T.weeks.map((_,w)=>'أ'+(w+1)+' مخالفات')],
+      ['','','','', '','','', '','', ...T.weeks],
+      list.map((st,k)=>{ const t=trStats(R,st.id); return [k+1, st.name, t.sess, t.abs, ...t.per.map(([y,c])=>P(c?y/c:null)), P(t.pct), t.vSess? t.viol : '',
+        ...T.weeks.map((_,w)=>{ const x=trStats(R,st.id,[w]); return x.vSess? x.viol : (x.abs? 'غ' : ''); })]; }),
+      [4,28,9,7,9,9,9,10,10,...Array(nW).fill(6)]);
     // سلم التقدير
     add(`${s} - سلم تقدير`, `سلم التقدير العددي للمهام الأدائية — ${SUBJ[s].full}`, s,
       ['م','اسم الطالب', ...R.rs.tasks.flatMap((t,i)=>[...t.crit.map((_,k)=>`م${i+1}: ${k+1}`), `مجموع المهمة ${i+1} (20)`]), 'النسبة','التقدير'],
